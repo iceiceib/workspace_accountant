@@ -1,8 +1,39 @@
 ================================================================================
   ACCOUNTANT SKILL — PROJECT STATUS & DEVELOPMENT LOG
-  Last updated: 2026-02-23 (Module 4 added)
+  Last updated: 2026-02-23 (Module 5 complete)
   Project: C:\Users\USER\workspace_accountant\accountant-skill
 ================================================================================
+
+################################################################################
+  RESUME POINT — START HERE NEXT SESSION
+################################################################################
+
+  Modules 1-5: COMPLETE
+  Next task  : Module 6 — Financial Statements
+
+  Script to create : scripts/generate_financials.py
+  Reference to read: references/financial-report-formats.md
+  Inputs           : data/Jan2026/trial_balance_Jan2026.xlsx  (Adjusted TB sheet)
+                     data/Jan2026/chart_of_accounts.xlsx
+  Output           : data/Jan2026/financial_statements_Jan2026.xlsx
+
+  Expected output sheets:
+    Dashboard        — key metrics (Revenue, Gross Profit, Net Income, ratios)
+    Income Statement — Revenue → COGS → Gross Profit → OpEx → Net Profit
+    Balance Sheet    — Assets = Liabilities + Equity (with Assets = L+E check)
+    Exceptions       — (only if errors)
+
+  Run command (after creating the script):
+    python scripts/generate_financials.py \
+      data/Jan2026 \
+      2026-01-01 \
+      2026-01-31 \
+      data/Jan2026/financial_statements_Jan2026.xlsx
+
+  After Module 6: build Module 7 (validate_accounting.py) — full-cycle checks.
+  After Module 7: update USERGUIDE.md to cover all 7 modules (user requested).
+
+################################################################################
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   SECTION 1: PROJECT OVERVIEW
