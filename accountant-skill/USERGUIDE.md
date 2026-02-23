@@ -1,5 +1,5 @@
 # Accountant Skill — User Guide
-### Shwe Mandalay Cafe / K&K Finance Team
+### K&K Finance Team
 *Last updated: 2026-02-23 | Covers Modules 1–4*
 
 ---
@@ -22,7 +22,7 @@
 
 ## 1. What This System Does
 
-This is a **full-cycle accounting automation system** for Shwe Mandalay Cafe. It reads your bookkeeping data from Excel files (`.xlsx`), processes it through a structured accounting workflow, and produces professional formatted reports — all without manual Excel formulas or copy-pasting.
+This is a **full-cycle accounting automation system** for K&K Business. It reads your bookkeeping data from Excel files (`.xlsx`), processes it through a structured accounting workflow, and produces professional formatted reports — all without manual Excel formulas or copy-pasting.
 
 **Everything is Excel in, Excel out.** No databases, no cloud services, no Google Sheets. Just Python processing your `.xlsx` files.
 
