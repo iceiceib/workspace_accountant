@@ -1,6 +1,6 @@
 # Accountant Skill — User Guide
 ### K&K Finance Team
-*Last updated: 2026-02-23 | Covers Modules 1–4*
+*Last updated: 2026-02-23 | Covers Modules 1–6*
 
 ---
 
@@ -14,9 +14,11 @@
 6. [Module 2 — Summarize Ledgers](#6-module-2--summarize-ledgers)
 7. [Module 3 — Bank Reconciliation](#7-module-3--bank-reconciliation)
 8. [Module 4 — Journal Adjustments](#8-module-4--journal-adjustments)
-9. [Input File Formats](#9-input-file-formats)
-10. [Output Formatting Standards](#10-output-formatting-standards)
-11. [Troubleshooting & Common Errors](#11-troubleshooting--common-errors)
+9. [Module 5 — Trial Balance](#9-module-5--trial-balance)
+10. [Module 6 — Financial Statements](#10-module-6--financial-statements)
+11. [Input File Formats](#11-input-file-formats)
+12. [Output Formatting Standards](#12-output-formatting-standards)
+13. [Troubleshooting & Common Errors](#13-troubleshooting--common-errors)
 
 ---
 
@@ -34,8 +36,8 @@ This is a **full-cycle accounting automation system** for K&K Business. It reads
 | Summarising all ledger balances | Module 2 |
 | Comparing cash book against bank statement | Module 3 |
 | Calculating depreciation, posting bank charges | Module 4 |
-| Preparing trial balance (coming) | Module 5 |
-| Producing P&L and Balance Sheet (coming) | Module 6 |
+| Preparing trial balance | Module 5 |
+| Producing P&L and Balance Sheet | Module 6 |
 | Full-cycle integrity audit (coming) | Module 7 |
 
 ---
@@ -71,11 +73,11 @@ The modules must be run **in order** because each one feeds the next.
 │  accruals and prepayments already in the journals               │
 │         │                                                       │
 │         ▼                                                       │
-│  MODULE 5 ── Trial Balance  (coming)                            │
+│  MODULE 5 ── Trial Balance                                      │
 │  Unadjusted → apply adjustments → Adjusted Trial Balance        │
 │         │                                                       │
 │         ▼                                                       │
-│  MODULE 6 ── Financial Statements  (coming)                     │
+│  MODULE 6 ── Financial Statements                               │
 │  Income Statement, Balance Sheet, Cash Flow Statement           │
 │         │                                                       │
 │         ▼                                                       │
@@ -149,7 +151,9 @@ accountant-skill/
 │       ├── books_of_prime_entry_Jan2026.xlsx    ← Module 1
 │       ├── ledger_summary_Jan2026.xlsx          ← Module 2
 │       ├── bank_reconciliation_Jan2026.xlsx     ← Module 3
-│       └── adjusting_entries_Jan2026.xlsx       ← Module 4
+│       ├── adjusting_entries_Jan2026.xlsx       ← Module 4
+│       ├── trial_balance_Jan2026.xlsx           ← Module 5
+│       └── financial_statements_Jan2026.xlsx   ← Module 6
 │
 ├── references/                 ← Accounting rules and schemas
 │   ├── journal-rules.md
@@ -165,6 +169,8 @@ accountant-skill/
     ├── summarize_ledgers.py
     ├── reconcile_bank.py
     ├── journal_adjustments.py
+    ├── generate_trial_balance.py
+    ├── generate_financials.py
     └── utils/
         ├── coa_mapper.py
         ├── pc_cc_mapper.py
@@ -535,7 +541,174 @@ python scripts/journal_adjustments.py \
 
 ---
 
-## 9. Input File Formats
+## 9. Module 5 — Trial Balance
+
+### What it does
+
+Reads the General Ledger closing balances (unadjusted) and the adjusting entries from Module 4, then produces:
+
+1. **Unadjusted Trial Balance** — GL closing balances before any adjustments
+2. **Adjustments** — the adjusting entries from Module 4 (individual list + per-account summary)
+3. **Adjusted Trial Balance** — balances after applying all adjusting entries
+4. **TB Worksheet** — a 6-column combined view: Unadjusted | Adj Entries | Adjusted
+5. **Dashboard** — Dr = Cr validation for both the unadjusted and adjusted TB
+
+### When to run it
+
+After Module 4 is complete and all adjusting entries are posted.
+
+### Input files required
+
+| File | What it contains |
+|---|---|
+| `general_ledger.xlsx` | All account movements (debits, credits, running balance) |
+| `adjusting_entries_Jan2026.xlsx` | Module 4 output — "All Entries" sheet is read automatically |
+| `chart_of_accounts.xlsx` | For account name and classification lookup |
+
+### How to run
+
+```bash
+python scripts/generate_trial_balance.py \
+  data/Jan2026 \
+  2026-01-01 \
+  2026-01-31 \
+  data/Jan2026/trial_balance_Jan2026.xlsx
+```
+
+**Arguments in order:**
+1. Data directory
+2. Period start date
+3. Period end date
+4. Output file path
+
+### Output file — sheets explained
+
+| Sheet | Tab Colour | What to look at |
+|---|---|---|
+| **Dashboard** | Green | Dr = Cr check for both TBs, total adjusting entries, warnings. |
+| **Unadjusted TB** | Blue | GL closing balance per account before adjustments. Dr = Cr check at bottom. |
+| **Adjustments** | Blue | Section 1: each individual ADJ- entry. Section 2: per-account net adjustment. |
+| **Adjusted TB** | Blue | Final balances after all adjusting entries. This sheet feeds Module 6. |
+| **TB Worksheet** | Orange | 6-column combined view: Unadj Debit/Credit | Adj Dr/Cr | Adjusted Debit/Credit. |
+| **Exceptions** | Red | Only appears if the TB is not balanced or errors are found. |
+
+### What to check in the output
+
+1. **Dashboard — Adjusted TB: Dr = Cr: PASS**
+   - Both the unadjusted and adjusted totals must balance (Total Debit = Total Credit).
+   - For January 2026: Adjusted TB totals Dr 21,762,750 = Cr 21,762,750.
+
+2. **Adjustments sheet — per-account summary** — verify the net effect on key accounts:
+   - Account 5300 (Depreciation Expense): +54,750 Dr (4 entries)
+   - Account 1020 (Cash at Bank): net −3,000 (bank interest +15,000, software −18,000)
+
+3. **Adjusted TB** — review that all IS accounts (4xxx, 5xxx) and BS accounts (1xxx, 2xxx, 3xxx) appear with sensible balances before proceeding to Module 6.
+
+---
+
+## 10. Module 6 — Financial Statements
+
+### What it does
+
+Reads the Adjusted Trial Balance from Module 5 and produces three core financial statements plus a dashboard summary:
+
+1. **Income Statement** — Revenue, COGS, Operating Expenses, Other Income/Expenses, Net Profit with gross/operating/net margins
+2. **Balance Sheet** — Non-Current Assets, Current Assets, Equity, Non-Current Liabilities, Current Liabilities, with Assets = Equity + Liabilities check
+3. **Cash Flow Statement** — Indirect method: Net Profit → non-cash adjustments → working capital changes → investing activities → financing activities → reconciles to closing cash balance
+4. **Dashboard** — key metrics at a glance, plus validation checks for the BS and CF
+
+### When to run it
+
+After Module 5 is complete and the Adjusted Trial Balance balances (Dr = Cr: PASS).
+
+### Input files required
+
+| File | What it contains |
+|---|---|
+| `trial_balance_Jan2026.xlsx` | Module 5 output — "Adjusted TB" sheet is read automatically |
+| `general_ledger.xlsx` | For opening cash balances (used in Cash Flow Statement) |
+| `adjusting_entries_Jan2026.xlsx` | For identifying non-cash items (depreciation, bad debt) in Cash Flow |
+
+### How to run
+
+```bash
+python scripts/generate_financials.py \
+  data/Jan2026 \
+  2026-01-01 \
+  2026-01-31 \
+  data/Jan2026/financial_statements_Jan2026.xlsx
+```
+
+**Arguments in order:**
+1. Data directory
+2. Period start date
+3. Period end date
+4. Output file path
+
+### Output file — sheets explained
+
+| Sheet | Tab Colour | What to look at |
+|---|---|---|
+| **Dashboard** | Green | Key metrics (Revenue, Gross Profit, Net Profit, margins, Total Assets), BS check (PASS/FAIL), CF check (PASS/FAIL), Cash Flow summary. |
+| **Income Statement** | Blue | Full P&L: Revenue → Net Revenue → Gross Profit → Operating Profit → Net Profit, with percentage margins. |
+| **Balance Sheet** | Blue | Full balance sheet with Assets = Equity + Liabilities check at the bottom. |
+| **Cash Flow** | Blue | Indirect method CF: Net Profit + non-cash items + WC changes + investing + financing = Net change in cash. Reconciles to closing cash. |
+| **Exceptions** | Red | Only appears if the BS does not balance or the CF does not reconcile. |
+
+### What to check in the output
+
+1. **Dashboard — Balance Sheet check: PASS**
+   - Total Assets must equal Total Equity + Total Liabilities. Difference must be 0.00.
+   - For January 2026: Total Assets = 13,215,750 = Equity 9,142,750 + Liabilities 4,073,000.
+
+2. **Dashboard — Cash Flow check: PASS**
+   - Opening Cash + Net Change in Cash must equal Closing Cash (from Balance Sheet).
+   - For January 2026: 1,550,000 + 35,500 = 1,585,500.
+
+3. **Income Statement — Net Profit** must be the same figure shown in the Balance Sheet under Equity as "Current Period Net Profit/(Loss)".
+
+4. **Balance Sheet — Contra accounts** (Allowance for Doubtful Debts, Accumulated Depreciation, Owner's Drawings) are shown indented and in parentheses (negative). This is correct presentation.
+
+5. **Exceptions sheet** — if present, address all items before using the statements for reporting.
+
+### How the Income Statement is structured
+
+| Section | Account range | Treatment |
+|---|---|---|
+| Revenue | 4000–4099 | Credit balance = positive revenue |
+| Less: Contra Revenue | 4200–4299 | Debit balance = shown as deduction (negative) |
+| **Net Revenue** | | Gross Revenue minus contra items |
+| Cost of Goods Sold | 5000–5099 | Debit balance = shown as cost (negative subtotal) |
+| **Gross Profit** | | Net Revenue minus COGS |
+| Operating Expenses | 5100–5899 | Debit balance = shown as cost |
+| **Operating Profit** | | Gross Profit minus Operating Expenses |
+| Other Income | 4100–4199 | Credit balance = positive |
+| Other Expenses | 5900–5949 | Debit balance = shown as negative |
+| Tax Expense | 5950 | Debit balance = shown as negative |
+| **Net Profit** | | Operating Profit + Net Other − Tax |
+
+### How the Cash Flow (indirect method) works
+
+Starting from Net Profit, the module makes three sets of adjustments:
+
+**1. Non-cash items (add back):**
+- Depreciation expense (account 5300) — identified from adjusting entries
+- Bad debt expense (account 5800) — identified from adjusting entries
+
+**2. Working capital changes:**
+- Current asset increase → negative CF (cash tied up in receivables/inventory)
+- Current asset decrease → positive CF (cash released)
+- Current liability increase → positive CF (cash not yet paid)
+- Current liability decrease → negative CF (cash paid)
+- Includes the Allowance for Doubtful Debts (1110) as a credit-normal working capital item
+
+**3. Investing and Financing:**
+- Investing: changes in fixed asset accounts (1600–1660)
+- Financing: changes in capital (3010), drawings (3020), loans (2060, 2100, 2110)
+
+---
+
+## 11. Input File Formats
 
 All input files are `.xlsx` with a **single header row** at row 1. The scripts use flexible column matching — minor variations in column names (e.g. `Debit Amount` vs `Debit`) are handled automatically.
 
@@ -595,7 +768,7 @@ All input files are `.xlsx` with a **single header row** at row 1. The scripts u
 
 ---
 
-## 10. Output Formatting Standards
+## 12. Output Formatting Standards
 
 All output files follow a consistent professional format:
 
@@ -623,7 +796,7 @@ All output files follow a consistent professional format:
 
 ---
 
-## 11. Troubleshooting & Common Errors
+## 13. Troubleshooting & Common Errors
 
 ### "File not found" errors
 
@@ -698,6 +871,54 @@ All output files follow a consistent professional format:
 
 ---
 
+### Trial Balance not balanced (Module 5)
+
+**Symptom:** Dashboard shows `Adjusted TB: Dr = Cr: FAIL` or Exceptions sheet appears.
+
+**Steps to investigate:**
+
+1. Check **Dashboard — Unadjusted TB** first. If it is also unbalanced, the error is in the GL data, not the adjustments. Fix Module 2 / Module 4 inputs and re-run.
+2. If only the **Adjusted TB** is unbalanced, check the adjusting entries: open `adjusting_entries_Jan2026.xlsx` → All Entries sheet → confirm the Dr = Cr check at the bottom shows PASS.
+3. Re-run Module 4 to regenerate the adjusting entries, then re-run Module 5.
+
+---
+
+### Balance Sheet does not balance (Module 6)
+
+**Symptom:** Dashboard shows `Balance Sheet check: FAIL` with a non-zero difference. Exceptions sheet appears.
+
+**Common causes:**
+- An account code appears in the Adjusted TB but is not classified (falls in an unknown range)
+- Net profit was not added to equity — this would show as Assets > Equity + Liabilities by exactly the net profit amount
+- A balance sheet account has an abnormal balance (e.g. a debit balance on a liability)
+
+**Steps to investigate:**
+
+1. Open the Balance Sheet sheet — look for any section where totals seem wrong
+2. Open the Exceptions sheet — it shows the exact difference
+3. Verify the Adjusted TB is balanced (Dr = Cr) before running Module 6 — an unbalanced TB will cause the BS to fail
+4. Check for any unknown account codes in the console output — unknown accounts are excluded and will cause an imbalance
+
+---
+
+### Cash Flow does not reconcile (Module 6)
+
+**Symptom:** Dashboard shows `Cash Flow check: FAIL`. The difference shown = Opening Cash + Net Change − Closing Cash.
+
+**Common causes:**
+- A balance sheet account changed during the period but is not captured in any CF section (operating WC, investing, or financing)
+- The GL opening balance file (`general_ledger.xlsx`) is not available — opening cash defaults to 0
+
+**Steps to investigate:**
+
+1. Check the console output for warnings about `general_ledger.xlsx` not found
+2. Review the Cash Flow sheet — check each section total looks reasonable
+3. The difference value tells you how much is unaccounted. Cross-check which BS accounts changed by that amount
+
+> **Note:** A small CF discrepancy (e.g. rounding of less than 1.00) can be ignored. Differences larger than 1.00 require investigation.
+
+---
+
 ### "Account XXXX" showing instead of account name (Module 4)
 
 **Symptom:** Account Impact sheet shows `Account 1631` instead of `Accum. Depr. — F&F`
@@ -751,8 +972,18 @@ python scripts/reconcile_bank.py \
 python scripts/journal_adjustments.py \
   data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/adjusting_entries_Jan2026.xlsx
+
+# MODULE 5 — Trial Balance
+python scripts/generate_trial_balance.py \
+  data/Jan2026 2026-01-01 2026-01-31 \
+  data/Jan2026/trial_balance_Jan2026.xlsx
+
+# MODULE 6 — Financial Statements
+python scripts/generate_financials.py \
+  data/Jan2026 2026-01-01 2026-01-31 \
+  data/Jan2026/financial_statements_Jan2026.xlsx
 ```
 
 ---
 
-*This guide will be updated as Modules 5 (Trial Balance), 6 (Financial Statements), and 7 (Validation) are completed.*
+*Module 7 (full-cycle validation) is coming. This guide will be updated when it is complete.*
