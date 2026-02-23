@@ -36,7 +36,8 @@ Install dependencies:
   3      | COMPLETE  | reconcile_bank.py            | Matches cash book vs bank stmt
   4      | COMPLETE  | journal_adjustments.py       | Depreciation, accruals,
          |           |                              | corrections
-  5      | PENDING   | generate_trial_balance.py    | Unadjusted/Adjusted/Post-close TB
+  5      | COMPLETE  | generate_trial_balance.py    | Unadjusted TB, Adjustments,
+         |           |                              | Adjusted TB, TB Worksheet
   6      | PENDING   | generate_financials.py       | P&L, Balance Sheet, Cash Flow
   7      | PENDING   | validate_accounting.py       | Full-cycle integrity checks
 
@@ -82,7 +83,8 @@ accountant-skill/
 │       ├── books_of_prime_entry_Jan2026.xlsx  ← Module 1 output
 │       ├── ledger_summary_Jan2026.xlsx        ← Module 2 output
 │       ├── bank_reconciliation_Jan2026.xlsx   ← Module 3 output
-│       └── adjusting_entries_Jan2026.xlsx     ← Module 4 output
+│       ├── adjusting_entries_Jan2026.xlsx     ← Module 4 output
+│       └── trial_balance_Jan2026.xlsx         ← Module 5 output
 │
 ├── references/
 │   ├── journal-rules.md
@@ -101,6 +103,7 @@ accountant-skill/
     ├── summarize_ledgers.py              ← Module 2 (COMPLETE)
     ├── reconcile_bank.py                 ← Module 3 (COMPLETE)
     ├── journal_adjustments.py            ← Module 4 (COMPLETE)
+    ├── generate_trial_balance.py         ← Module 5 (COMPLETE)
     │
     └── utils/
         ├── __init__.py
@@ -561,31 +564,78 @@ GL balance computation:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  SECTION 12 (NEW): NEXT STEPS (Module 5 — Trial Balance)
+  SECTION 12: MODULE 5 — TRIAL BALANCE (COMPLETE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Script to create:  scripts/generate_trial_balance.py
-Reference to read: references/chart-of-accounts.md  (for account ordering)
+Script:  scripts/generate_trial_balance.py
 
-Inputs:
-  general_ledger.xlsx           — unadjusted account balances (from Module 2)
-  adjusting_entries_Jan2026.xlsx — all ADJ- entries (from Module 4)
-  chart_of_accounts.xlsx        — account ordering and classification
-
-Output: trial_balance_Jan2026.xlsx
-  Expected sheets:
-    Unadjusted TB      — raw GL balances before adjusting entries
-    Adjustments        — the ADJ- entries from Module 4 (Dr/Cr columns)
-    Adjusted TB        — GL balances AFTER applying all ADJ- entries
-    Validation         — Total Dr = Total Cr check on all three columns
-
-User command to trigger: "Generate trial balance for January 2026"
-Script call:
+How to run:
   python scripts/generate_trial_balance.py \
     data/Jan2026 \
     2026-01-01 \
     2026-01-31 \
     data/Jan2026/trial_balance_Jan2026.xlsx
+
+Inputs consumed:
+  general_ledger.xlsx            — unadjusted closing balances (from GL data)
+  adjusting_entries_Jan2026.xlsx — ADJ- entries from Module 4 (All Entries sheet)
+  chart_of_accounts.xlsx         — account ordering and classification
+
+Output file contains sheets:
+  Dashboard     — summary counts, Dr=Cr validation for both TB columns
+  Unadjusted TB — GL closing balances before adjustments (Dr/Cr format)
+  Adjustments   — individual ADJ- entries + per-account net adjustment summary
+  Adjusted TB   — balances after applying all adjusting entries
+  TB Worksheet  — 6-column combined view (Unadj | Adj entries | Adjusted)
+  Exceptions    — (only if errors; omitted if zero)
+
+Verified test run result (Module 5, Jan2026):
+  GL accounts loaded:              38
+  Adjusting entries applied:        6  (ADJ-001 to ADJ-006 from Module 4)
+  TB accounts (total):             40  (38 GL + 2 new from adjustments)
+  New accounts from adjustments:
+    4110 Interest Income       (was 0 in GL, now 15,000 Cr after ADJ-005)
+    5300 Depreciation Expense  (was 0 in GL, now 54,750 Dr after ADJ-001 to ADJ-004)
+  Unadjusted TB: Total Dr = Total Cr = 21,693,000  BALANCED
+  Adjusted TB:   Total Dr = Total Cr = 21,762,750  BALANCED
+  Difference (adj - unadj) = 69,750 on each side, explained by:
+    New Dr balances: +54,750 depr + +18,000 software + +15,000 interest cash
+                     -18,000 cash paid = +69,750
+    New Cr balances: +18,750 + 22,500 + 6,000 + 7,500 + 15,000 = +69,750
+
+Key implementation details:
+  GL balance reading: same pattern as summarize_ledgers.py — reads opening
+    (last balance before period_start) + period debits/credits → closing.
+    Falls back to computing closing from opening + Dr - Cr if Balance column is NaN.
+  Adjustments reading: dynamic header detection for 'All Entries' sheet
+    (title block precedes column headers). Filters out grand-total rows by
+    checking that Dr Code and Cr Code are numeric strings.
+  TB display: debit-normal accounts show closing balance in Debit column;
+    credit-normal in Credit column. Negative (abnormal) balances shown on
+    opposite side.
+
+Totals fix applied:
+  Adjustment "TOTALS" row in All Entries sheet has non-numeric Dr/Cr codes.
+  Filter: skip any row where _norm_code(Dr Code).isdigit() is False.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SECTION 13 (NEW): NEXT STEPS (Module 6 — Financial Statements)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Script to create: scripts/generate_financials.py
+Reference to read: references/financial-report-formats.md
+
+Inputs:
+  trial_balance_Jan2026.xlsx    — adjusted closing balances (Adjusted TB sheet)
+  chart_of_accounts.xlsx        — income statement vs balance sheet classification
+
+Output: financial_statements_Jan2026.xlsx
+  Expected sheets:
+    Dashboard        — key metrics (Revenue, COGS, Gross Profit, Net Income, etc.)
+    Income Statement — Revenue → COGS → Gross Profit → OpEx → Net Profit
+    Balance Sheet    — Assets = Liabilities + Equity
+    Cash Flow        — (optional) Operating / Investing / Financing activities
+    Exceptions       — (only if errors)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

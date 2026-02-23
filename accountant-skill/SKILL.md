@@ -5,7 +5,7 @@ description: "Full-cycle accounting skill for SME businesses using .xlsx files. 
 
 # Accountant Skill
 
-An end-to-end accounting cycle skill for SME businesses (specifically Shwe Mandalay Cafe / K&K Finance Team). All inputs and outputs are `.xlsx` Excel files processed with Python (openpyxl + pandas).
+An end-to-end accounting cycle skill for SME businesses (specifically K&K Business). All inputs and outputs are `.xlsx` Excel files processed with Python (openpyxl + pandas).
 
 ## Quick Reference — Modules
 
