@@ -49,10 +49,16 @@ python scripts/generate_trial_balance.py data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/trial_balance_Jan2026.xlsx
 ```
 
-**Module 6 — Financial Statements (pending):**
+**Module 6 — Financial Statements:**
 ```
 python scripts/generate_financials.py data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/financial_statements_Jan2026.xlsx
+```
+
+**Module 7 — Full-Cycle Validation:**
+```
+python scripts/validate_accounting.py data/Jan2026 2026-01-01 2026-01-31 \
+  data/Jan2026/audit_validation_Jan2026.xlsx
 ```
 
 **Generate test data (once only):**
@@ -127,9 +133,9 @@ All module scripts import from `scripts/utils/`:
 
 ## Current Status
 
-- **Complete:** Modules 1–5
-- **Next:** Module 6 (`scripts/generate_financials.py`) — reads `trial_balance_Jan2026.xlsx` (Adjusted TB sheet), outputs Dashboard, Income Statement, Balance Sheet, Exceptions. See `references/financial-report-formats.md`.
-- **After Module 6:** Module 7 (`validate_accounting.py`) full-cycle integrity checks, then update USERGUIDE.md.
+- **Complete:** Modules 1–7 (Full accounting cycle)
+- **Pending:** Module 7 integration into production workflow
+- **Next:** Update USERGUIDE.md to cover all modules
 
 ---
 

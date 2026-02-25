@@ -1,6 +1,6 @@
 # Accountant Skill — User Guide
 ### K&K Finance Team
-*Last updated: 2026-02-23 | Covers Modules 1–6*
+*Last updated: 2026-02-25 | Covers Modules 1–7*
 
 ---
 
@@ -16,9 +16,12 @@
 8. [Module 4 — Journal Adjustments](#8-module-4--journal-adjustments)
 9. [Module 5 — Trial Balance](#9-module-5--trial-balance)
 10. [Module 6 — Financial Statements](#10-module-6--financial-statements)
-11. [Input File Formats](#11-input-file-formats)
-12. [Output Formatting Standards](#12-output-formatting-standards)
-13. [Troubleshooting & Common Errors](#13-troubleshooting--common-errors)
+11. [Module 7 — Full-Cycle Validation](#11-module-7--full-cycle-validation)
+12. [Input File Formats](#12-input-file-formats)
+13. [Output Formatting Standards](#13-output-formatting-standards)
+14. [Troubleshooting & Common Errors](#14-troubleshooting--common-errors)
+    - [Module 7 — Validation Failures](#module-7--validation-failures)
+15. [Quick Reference — All Commands](#quick-reference--all-commands)
 
 ---
 
@@ -38,7 +41,7 @@ This is a **full-cycle accounting automation system** for K&K Business. It reads
 | Calculating depreciation, posting bank charges | Module 4 |
 | Preparing trial balance | Module 5 |
 | Producing P&L and Balance Sheet | Module 6 |
-| Full-cycle integrity audit (coming) | Module 7 |
+| Full-cycle integrity audit | Module 7 |
 
 ---
 
@@ -81,8 +84,9 @@ The modules must be run **in order** because each one feeds the next.
 │  Income Statement, Balance Sheet, Cash Flow Statement           │
 │         │                                                       │
 │         ▼                                                       │
-│  MODULE 7 ── Validation  (coming)                               │
-│  Full integrity check across all modules                        │
+│  MODULE 7 ── Full-Cycle Validation                              │
+│  Comprehensive audit: double-entry, control accounts,           │
+│  cross-module flow, financial statement integrity               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -153,7 +157,8 @@ accountant-skill/
 │       ├── bank_reconciliation_Jan2026.xlsx     ← Module 3
 │       ├── adjusting_entries_Jan2026.xlsx       ← Module 4
 │       ├── trial_balance_Jan2026.xlsx           ← Module 5
-│       └── financial_statements_Jan2026.xlsx   ← Module 6
+│       ├── financial_statements_Jan2026.xlsx    ← Module 6
+│       └── audit_validation_Jan2026.xlsx        ← Module 7
 │
 ├── references/                 ← Accounting rules and schemas
 │   ├── journal-rules.md
@@ -708,7 +713,154 @@ Starting from Net Profit, the module makes three sets of adjustments:
 
 ---
 
-## 11. Input File Formats
+## 11. Module 7 — Full-Cycle Validation
+
+### What it does
+
+Performs a comprehensive audit of the entire accounting cycle by reading all module outputs (Modules 1–6) and validating:
+
+1. **Double-Entry Integrity** — Every journal, adjusting entry, and trial balance has Debits = Credits
+2. **Control Account Reconciliation** — AR, AP, and Cash GL balances match their subsidiary ledgers
+3. **Cross-Module Flow** — Data flows correctly between modules (e.g., Module 3 adjusting entries appear in Module 4, Module 4 entries flow to Module 5, Module 5 net profit ties to Module 6)
+4. **Financial Statement Validation** — Balance Sheet balances (Assets = Equity + Liabilities), Cash Flow reconciles (Opening + Net Change = Closing)
+
+The module produces an audit validation report with a dashboard summary showing PASS/FAIL status for every check.
+
+### When to run it
+
+After Module 6 is complete and all financial statements have been generated. Module 7 is the final quality gate before issuing financial reports.
+
+### Input files required
+
+Module 7 automatically reads all prior module outputs from the data directory:
+
+| File | Source | What it validates |
+|---|---|---|
+| `books_of_prime_entry_*.xlsx` | Module 1 | Journal double-entry balance |
+| `ledger_summary_*.xlsx` | Module 2 | Control account reconciliation |
+| `bank_reconciliation_*.xlsx` | Module 3 | Bank recon adjusting entries |
+| `adjusting_entries_*.xlsx` | Module 4 | Adjusting entry balance |
+| `trial_balance_*.xlsx` | Module 5 | TB balance, data flow from Module 4 |
+| `financial_statements_*.xlsx` | Module 6 | BS balance, CF reconciliation |
+| `chart_of_accounts.xlsx` | Master data | Account classification |
+
+### How to run
+
+```bash
+python scripts/validate_accounting.py \
+  data/Jan2026 \
+  2026-01-01 \
+  2026-01-31 \
+  data/Jan2026/audit_validation_Jan2026.xlsx
+```
+
+**Arguments in order:**
+1. Data directory
+2. Period start date
+3. Period end date
+4. Output file path
+
+### Output file — sheets explained
+
+| Sheet | Tab Colour | What to look at |
+|---|---|---|
+| **Dashboard** | Green | Summary of all validation checks with PASS/FAIL status. Overall result at top. |
+| **Double-Entry Checks** | Blue | Detailed results for each journal and TB balance check. Shows Dr total, Cr total, difference. |
+| **Control Account Recon** | Blue | AR, AP, Cash reconciliation: GL balance vs subsidiary ledger total, with difference. |
+| **Cross-Module Flow** | Orange | Data flow validation between modules. Shows item counts and ties (e.g., net profit tie-out). |
+| **Financial Validation** | Blue | Balance Sheet and Cash Flow validation results with detailed calculations. |
+| **Exceptions** | Red | Only appears if there are FAIL or WARN results. Lists all items requiring attention. |
+
+### What to check in the output
+
+1. **Dashboard — Overall Result: PASS**
+   - All critical checks must pass. If any show FAIL, do not proceed with financial reporting.
+   - Summary shows: X/Y checks passed, with breakdown by status (PASS/FAIL/WARN/SKIP).
+
+2. **Double-Entry Checks — all PASS:**
+   - Module 1 journals: Each of the 6 journals must balance
+   - Module 4 adjusting entries: All ADJ- entries combined must balance
+   - Module 5 trial balances: Both Unadjusted and Adjusted TB must balance
+
+3. **Control Account Recon — all MATCH:**
+   - AR (1100): GL balance = Sum of customer balances
+   - AP (2010): GL balance = Sum of supplier balances
+   - Cash (1020): GL balance = Cash ledger closing balance
+
+4. **Cross-Module Flow — data continuity:**
+   - Module 3 → Module 4: Bank reconciliation adjusting entries appear in Module 4
+   - Module 4 → Module 5: All adjusting entries flow to the Trial Balance
+   - Module 5 → Module 6: Net profit from TB matches IS net profit
+
+5. **Financial Validation — key equations:**
+   - Balance Sheet: Assets = Equity + Liabilities (Difference must be 0.00)
+   - Cash Flow: Opening Cash + Net Change = Closing Cash (Difference must be 0.00)
+
+6. **Exceptions sheet — if present:**
+   - Review all FAIL items first — these are critical errors that must be fixed
+   - WARN items indicate potential issues that should be investigated
+   - SKIP means data was not available for that check (e.g., subsidiary ledger not found)
+
+### Validation check categories
+
+| Category | Checks | What it validates |
+|---|---|---|
+| Double-Entry | 4+ checks | Every journal, adjusting entry, and TB has Dr = Cr |
+| Control Account Recon | 3 checks | AR, AP, Cash GL balances match subsidiary ledgers |
+| Cross-Module Flow | 3 checks | Data flows correctly between modules |
+| Financial Validation | 4+ checks | BS balances, CF reconciles, dashboard checks |
+
+### Example output (January 2026)
+
+```
+============================================================
+  MODULE 7 -- FULL-CYCLE ACCOUNTING VALIDATION
+  Period : 2026-01-01 to 2026-01-31
+  Data   : data/Jan2026
+  Output : data/Jan2026/audit_validation_Jan2026.xlsx
+============================================================
+
+Loading module outputs...
+  All module outputs loaded successfully.
+
+Running validation checks...
+  - Checking double-entry integrity...
+  - Reconciling control accounts...
+  - Validating cross-module data flow...
+  - Validating financial statements...
+
+Validation complete: 5/5 passed, 0 failed, 0 warnings
+
+============================================================
+  OUTPUT  : data/Jan2026/audit_validation_Jan2026.xlsx
+  Sheets  : Dashboard | Double-Entry Checks | Control Account Recon
+            Cross-Module Flow | Financial Validation | Exceptions
+  RESULT  : PASS (5/5 checks passed)
+============================================================
+```
+
+### Understanding check statuses
+
+| Status | Meaning | Action required |
+|---|---|---|
+| PASS | Check succeeded | None |
+| FAIL | Check failed | Investigate and fix the root cause before proceeding |
+| WARN | Check passed with warnings | Review the warning details; may not block reporting |
+| SKIP | Check could not be performed | Data not available (e.g., subsidiary ledger not provided) |
+
+### Common failure scenarios
+
+| Failure | Likely cause | Fix |
+|---|---|---|
+| Double-entry FAIL | Journal entry with Dr ≠ Cr | Go back to source journal, correct the entry, re-run Module 1 |
+| Control account MISMATCH | GL and subsidiary ledger totals differ | Find the missing/duplicate transaction, correct source data, re-run Module 2 |
+| Cross-module flow WARN | Adjusting entries not flowing to next module | Check that prior module output files exist and are correctly formatted |
+| Balance Sheet FAIL | BS does not balance | Check for unknown account codes in Adjusted TB; verify Module 5 output is balanced |
+| Cash Flow FAIL | CF does not reconcile to closing cash | Check that all BS account changes are captured in CF sections |
+
+---
+
+## 12. Input File Formats
 
 All input files are `.xlsx` with a **single header row** at row 1. The scripts use flexible column matching — minor variations in column names (e.g. `Debit Amount` vs `Debit`) are handled automatically.
 
@@ -768,7 +920,7 @@ All input files are `.xlsx` with a **single header row** at row 1. The scripts u
 
 ---
 
-## 12. Output Formatting Standards
+## 13. Output Formatting Standards
 
 All output files follow a consistent professional format:
 
@@ -796,7 +948,7 @@ All output files follow a consistent professional format:
 
 ---
 
-## 13. Troubleshooting & Common Errors
+## 14. Troubleshooting & Common Errors
 
 ### "File not found" errors
 
@@ -945,6 +1097,28 @@ All modules are **idempotent** — running them again for the same period will o
 
 ---
 
+### Module 7 — Validation failures
+
+**Symptom:** Module 7 Dashboard shows FAIL for one or more checks.
+
+**By check type:**
+
+| Check Type | Common Cause | Fix |
+|---|---|---|
+| Double-entry FAIL | Journal or TB has Dr ≠ Cr | Go to source module, fix the unbalanced entry, re-run that module |
+| Control Account FAIL | GL ≠ Subsidiary Ledger | Trace missing/duplicate transaction, correct source data, re-run Module 2 |
+| Cross-module WARN | Data gap between modules | Check prior module outputs exist; may be expected if no adjusting entries |
+| Balance Sheet FAIL | BS doesn't balance | Verify Adjusted TB is balanced; check for unknown account codes |
+| Cash Flow FAIL | CF doesn't reconcile | Check all BS account changes are captured in CF sections |
+
+**General approach:**
+1. Open the Exceptions sheet — it lists all FAIL and WARN items
+2. Fix FAIL items in priority order: Double-entry → Control Accounts → Financial Validation
+3. Re-run the affected module(s) upstream, then re-run Module 7
+4. WARN items can often be reviewed and accepted if the explanation is satisfactory
+
+---
+
 ## Quick Reference — All Commands
 
 ```bash
@@ -982,8 +1156,13 @@ python scripts/generate_trial_balance.py \
 python scripts/generate_financials.py \
   data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/financial_statements_Jan2026.xlsx
+
+# MODULE 7 — Full-Cycle Validation
+python scripts/validate_accounting.py \
+  data/Jan2026 2026-01-01 2026-01-31 \
+  data/Jan2026/audit_validation_Jan2026.xlsx
 ```
 
 ---
 
-*Module 7 (full-cycle validation) is coming. This guide will be updated when it is complete.*
+*All 7 modules are now complete. The accounting cycle is fully automated from source journals through financial statements with end-to-end validation.*
