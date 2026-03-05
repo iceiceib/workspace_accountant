@@ -330,9 +330,9 @@ python scripts/summarize_ledgers.py \
 ### What to check in the output
 
 1. **Control Account Reconciliation — all MATCH:**
-   - `AR (1100): GL balance = Sum of customer balances`
-   - `AP (2010): GL balance = Sum of supplier balances`
-   - `Cash (1020): GL balance = Cash ledger closing balance`
+   - `AR (11000): GL balance = Sum of customer balances`
+   - `AP (20000): GL balance = Sum of supplier balances`
+   - `Cash (10100): GL balance = Cash ledger closing balance`
    - If any show MISMATCH, investigate before proceeding.
 
 2. **GL Balances — REVIEW flags:**
@@ -527,11 +527,11 @@ python scripts/journal_adjustments.py \
 | ADJ-002 | Depreciation — Plant & Machinery | 5300 Depr. Expense | 1621 Accum. Depr. | 22,500 |
 | ADJ-003 | Depreciation — Furniture & Fixtures | 5300 Depr. Expense | 1631 Accum. Depr. | 6,000 |
 | ADJ-004 | Depreciation — Office Equipment | 5300 Depr. Expense | 1651 Accum. Depr. | 7,500 |
-| ADJ-005 | Bank interest earned | 1020 Cash at Bank | 4110 Interest Income | 15,000 |
-| ADJ-006 | Software subscription auto-debit | 5220 Tel & Internet | 1020 Cash at Bank | 18,000 |
+| ADJ-005 | Bank interest earned | 10100 Cash at Bank | 70000 Interest Income | 15,000 |
+| ADJ-006 | Software subscription auto-debit | 65000 Tel & Internet | 10100 Cash at Bank | 18,000 |
 
 4. **Account Impact** — confirms the net effect on cash:
-   - Account 1020 (Cash at Bank): `+15,000 (interest) − 18,000 (software) = −3,000 net`
+   - Account 10100 (Cash at Bank): `+15,000 (interest) − 18,000 (software) = −3,000 net`
    - Pre-adjustment: 1,438,500 → Post-adjustment: **1,435,500**
 
 ### Depreciation — account codes used
@@ -605,7 +605,7 @@ python scripts/generate_trial_balance.py \
 
 2. **Adjustments sheet — per-account summary** — verify the net effect on key accounts:
    - Account 5300 (Depreciation Expense): +54,750 Dr (4 entries)
-   - Account 1020 (Cash at Bank): net −3,000 (bank interest +15,000, software −18,000)
+   - Account 10100 (Cash at Bank): net −3,000 (bank interest +15,000, software −18,000)
 
 3. **Adjusted TB** — review that all IS accounts (4xxx, 5xxx) and BS accounts (1xxx, 2xxx, 3xxx) appear with sensible balances before proceeding to Module 6.
 
@@ -709,7 +709,7 @@ Starting from Net Profit, the module makes three sets of adjustments:
 
 **3. Investing and Financing:**
 - Investing: changes in fixed asset accounts (1600–1660)
-- Financing: changes in capital (3010), drawings (3020), loans (2060, 2100, 2110)
+- Financing: changes in capital (31000), drawings (30200), loans (250000, 2100, 2110)
 
 ---
 
@@ -783,9 +783,9 @@ python scripts/validate_accounting.py \
    - Module 5 trial balances: Both Unadjusted and Adjusted TB must balance
 
 3. **Control Account Recon — all MATCH:**
-   - AR (1100): GL balance = Sum of customer balances
-   - AP (2010): GL balance = Sum of supplier balances
-   - Cash (1020): GL balance = Cash ledger closing balance
+   - AR (11000): GL balance = Sum of customer balances
+   - AP (20000): GL balance = Sum of supplier balances
+   - Cash (10100): GL balance = Cash ledger closing balance
 
 4. **Cross-Module Flow — data continuity:**
    - Module 3 → Module 4: Bank reconciliation adjusting entries appear in Module 4
@@ -910,7 +910,7 @@ All input files are `.xlsx` with a **single header row** at row 1. The scripts u
 |---|---|---|
 | Asset ID | Yes | Unique identifier (e.g. FA-001) |
 | Description | Yes | Asset name |
-| Account Code | Yes | Asset account code (e.g. 1610 for Buildings) |
+| Account Code | Yes | Asset account code (e.g. 15100 for Buildings) |
 | Cost | Yes | Original purchase cost |
 | Useful Life (Years) | Yes | For depreciation calculation |
 | Salvage Value | No | Residual value (default 0 if omitted) |
@@ -1071,7 +1071,7 @@ All output files follow a consistent professional format:
 
 ---
 
-### "Account XXXX" showing instead of account name (Module 4)
+### "Account XXXXX" showing instead of account name (Module 4)
 
 **Symptom:** Account Impact sheet shows `Account 1631` instead of `Accum. Depr. — F&F`
 

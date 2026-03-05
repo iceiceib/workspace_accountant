@@ -15,7 +15,7 @@ For the period ended [DATE]
 
                                         Current Period    (Prior Period)
 REVENUE
-  Sales Revenue — Shop 1  (4010)            XXX              XXX
+  Sales Revenue — Shop 1  (40000)            XXX              XXX
   Sales Revenue — Shop 2  (4020)            XXX              XXX
   Sales Revenue — Shop 3  (4030)            XXX              XXX
   Sales Revenue — General (4040)            XXX              XXX
@@ -25,7 +25,7 @@ REVENUE
   NET REVENUE                               XXX              XXX
 
 COST OF GOODS SOLD
-  Raw Materials Used (5010)                 XXX              XXX
+  Raw Materials Used (50000)                 XXX              XXX
   Packaging Costs (5020)                    XXX              XXX
   Direct Labour (5030)                      XXX              XXX
   Manufacturing Overhead (5040)             XXX              XXX
@@ -37,7 +37,7 @@ GROSS PROFIT                                XXX              XXX
   Gross Profit Margin                      XX.X%            XX.X%
 
 OPERATING EXPENSES
-  Salaries & Wages (5100)                   XXX              XXX
+  Salaries & Wages (61000)                   XXX              XXX
   Employee Benefits (5110)                  XXX              XXX
   Rent Expense (5200)                       XXX              XXX
   Utilities Expense (5210)                  XXX              XXX
@@ -74,12 +74,12 @@ NET PROFIT / (LOSS)                         XXX              XXX
 
 ### Account Mapping
 - Revenue accounts: 4000-4999 (credit balances = positive revenue)
-- COGS accounts: 5010-5050 (debit balances = shown as negative)
-- Operating expense accounts: 5100-5900
+- COGS accounts: 50000-5050 (debit balances = shown as negative)
+- Operating expense accounts: 61000-5900
 - Non-operating: 4100-4120 (income), 5910-5950 (expenses)
 
 ### Formulas
-- Net Revenue = Sum(4010:4040) - Sum(4200:4210)
+- Net Revenue = Sum(40000:4040) - Sum(4200:4210)
 - Gross Profit = Net Revenue - Total COGS
 - Operating Profit = Gross Profit - Total Operating Expenses
 - Net Profit = Operating Profit + Net Other Income/Expenses - Tax
@@ -98,7 +98,7 @@ As at [DATE]
                                         Current Period    (Prior Period)
 NON-CURRENT ASSETS
   Land (1600)                               XXX              XXX
-  Buildings (1610)                          XXX              XXX
+  Buildings (161000)                          XXX              XXX
     Less: Accum. Depreciation (1611)       (XXX)            (XXX)
   Plant & Machinery (1620)                  XXX              XXX
     Less: Accum. Depreciation (1621)       (XXX)            (XXX)
@@ -113,10 +113,10 @@ NON-CURRENT ASSETS
   TOTAL NON-CURRENT ASSETS                  XXX              XXX
 
 CURRENT ASSETS
-  Inventory — Raw Materials (1200)          XXX              XXX
+  Inventory — Raw Materials (12000)          XXX              XXX
   Inventory — Packaging (1210)              XXX              XXX
   Inventory — Finished Goods (1220)         XXX              XXX
-  Accounts Receivable (1100)                XXX              XXX
+  Accounts Receivable (11000)                XXX              XXX
     Less: Allowance for Doubtful Debts(1110)(XXX)           (XXX)
   Prepaid Expenses (1300-1320)              XXX              XXX
   Advances to Employees (1400)              XXX              XXX
@@ -130,7 +130,7 @@ TOTAL ASSETS                                XXX              XXX
                                           ═════            ═════
 
 EQUITY
-  Owner's Capital (3010)                    XXX              XXX
+  Owner's Capital (31000)                    XXX              XXX
   Less: Owner's Drawings (3020)            (XXX)            (XXX)
   Retained Earnings (3030)                  XXX              XXX
   Current Period Net Profit/(Loss) (3040)   XXX              XXX
@@ -144,7 +144,7 @@ NON-CURRENT LIABILITIES
   TOTAL NON-CURRENT LIABILITIES             XXX              XXX
 
 CURRENT LIABILITIES
-  Accounts Payable (2010)                   XXX              XXX
+  Accounts Payable (20000)                   XXX              XXX
   Accrued Expenses (2020)                   XXX              XXX
   Accrued Wages (2030)                      XXX              XXX
   Unearned Revenue (2040)                   XXX              XXX

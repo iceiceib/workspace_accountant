@@ -26,7 +26,7 @@ Revenue that has been earned during the period but cash hasn't been received yet
 | Example | Debit | Credit |
 |---------|-------|--------|
 | Services delivered, not yet invoiced | 1100 Accounts Receivable | 4040 Sales Revenue |
-| Interest earned on bank deposit | 1020 Cash at Bank | 4110 Interest Income |
+| Interest earned on bank deposit | 10100 Cash at Bank | 70000 Interest Income |
 
 ### 3. Prepaid Expenses (Expenses paid in advance, now used up)
 
@@ -66,11 +66,11 @@ Where: Depreciation Rate = 1 - (Salvage Value / Cost)^(1/Useful Life)
 
 | Entry | Debit | Credit |
 |-------|-------|--------|
-| Monthly depreciation — Buildings | 5300 Depreciation Expense | 1611 Accum. Depr. — Buildings |
-| Monthly depreciation — Plant & Machinery | 5300 Depreciation Expense | 1621 Accum. Depr. — P&M |
-| Monthly depreciation — Furniture | 5300 Depreciation Expense | 1631 Accum. Depr. — F&F |
-| Monthly depreciation — Vehicles | 5300 Depreciation Expense | 1641 Accum. Depr. — Vehicles |
-| Monthly depreciation — Equipment | 5300 Depreciation Expense | 1651 Accum. Depr. — Equipment |
+| Monthly depreciation — Buildings | 66000 Depreciation Expense | 1611 Accum. Depr. — Buildings |
+| Monthly depreciation — Plant & Machinery | 66000 Depreciation Expense | 1621 Accum. Depr. — P&M |
+| Monthly depreciation — Furniture | 66000 Depreciation Expense | 1631 Accum. Depr. — F&F |
+| Monthly depreciation — Vehicles | 66000 Depreciation Expense | 1641 Accum. Depr. — Vehicles |
+| Monthly depreciation — Equipment | 66000 Depreciation Expense | 1651 Accum. Depr. — Equipment |
 
 **Source data**: Read from `fixed_asset_register.xlsx` to calculate depreciation per asset, then aggregate by category.
 

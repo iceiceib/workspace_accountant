@@ -8,11 +8,11 @@ The books of prime entry (journals) are the first point of recording for all bus
 
 | Journal | Purpose | Typical Debit | Typical Credit |
 |---------|---------|---------------|----------------|
-| Sales Journal | Credit sales to customers | 1100 Accounts Receivable | 4010-4040 Sales Revenue |
-| Purchases Journal | Credit purchases from suppliers | 5010-5050 COGS / 1200 Inventory | 2010 Accounts Payable |
-| Cash Receipts Journal | All money received | 1020 Cash at Bank | Various (1100 AR, 4010 Sales, etc.) |
-| Cash Payments Journal | All money paid out | Various (2010 AP, 5100-5900 Expenses) | 1020 Cash at Bank |
-| Payroll Journal | Salary & wage entries | 5100 Salaries & Wages | 1020 Bank / 2030 Accrued Wages |
+| Sales Journal | Credit sales to customers | 11000 Accounts Receivable | 40000 Sales Revenue |
+| Purchases Journal | Credit purchases from suppliers | 50000-50299 COGS / 12000 Inventory | 20000 Accounts Payable |
+| Cash Receipts Journal | All money received | 10100 Cash at Bank | Various (11000 AR, 40000 Sales, etc.) |
+| Cash Payments Journal | All money paid out | Various (20000 AP, 60000-69000 Expenses) | 10100 Cash at Bank |
+| Payroll Journal | Salary & wage entries | 61000 Office Salaries | 10100 Bank / 22200 Wages Payable |
 | General Journal | All other entries (adjustments, corrections, non-cash) | Various | Various |
 
 ## Validation Rules
@@ -22,7 +22,7 @@ The books of prime entry (journals) are the first point of recording for all bus
 2. **Reference number must be present** and unique within the journal
 3. **At least one debit and one credit account** must be specified
 4. **Debit Amount = Credit Amount** for every entry (or group of entries sharing the same reference)
-5. **Account codes must exist** in chart_of_accounts.xlsx
+5. **Account codes must exist** in chart_of_accounts.xlsx (5-digit codes)
 6. **Amounts must be positive** (never negative in a journal)
 
 ### Compound Entries

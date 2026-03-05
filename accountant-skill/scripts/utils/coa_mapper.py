@@ -5,28 +5,80 @@ import pandas as pd
 from pathlib import Path
 
 
-# Default account classification based on code ranges
+# Default account classification based on 5-digit code ranges
+# Matches K&K Finance Chart of Accounts structure
 DEFAULT_CLASSIFICATIONS = {
-    (1000, 1099): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Cash & Equivalents'},
-    (1100, 1199): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Receivables'},
-    (1200, 1299): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Inventory'},
-    (1300, 1499): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Prepaid & Other Current'},
-    (1500, 1599): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Other Current Assets'},
-    (1600, 1699): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Fixed Assets'},
-    (1700, 1999): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Intangible Assets'},
-    (2000, 2099): {'type': 'Liability', 'sub_type': 'Current Liability', 'normal': 'Credit', 'group': 'Current Liabilities'},
-    (2100, 2999): {'type': 'Liability', 'sub_type': 'Non-Current Liability', 'normal': 'Credit', 'group': 'Non-Current Liabilities'},
-    (3000, 3999): {'type': 'Equity', 'sub_type': 'Equity', 'normal': 'Credit', 'group': 'Equity'},
-    (4000, 4099): {'type': 'Revenue', 'sub_type': 'Operating Revenue', 'normal': 'Credit', 'group': 'Sales Revenue'},
-    (4100, 4199): {'type': 'Revenue', 'sub_type': 'Non-Operating Revenue', 'normal': 'Credit', 'group': 'Other Income'},
-    (4200, 4299): {'type': 'Revenue', 'sub_type': 'Revenue Contra', 'normal': 'Debit', 'group': 'Sales Returns & Discounts'},
-    (5000, 5099): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Cost of Goods Sold'},
-    (5100, 5899): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Operating Expenses'},
-    (5900, 5999): {'type': 'Expense', 'sub_type': 'Non-Operating Expense', 'normal': 'Debit', 'group': 'Non-Operating Expenses'},
+    # Assets (10000-19999)
+    (10000, 10999): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Cash & Equivalents'},
+    (11000, 11999): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Accounts Receivable'},
+    (12000, 12999): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Inventory'},
+    (13000, 13999): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Advanced Payments & Prepayments'},
+    (14000, 14999): {'type': 'Asset', 'sub_type': 'Current Asset', 'normal': 'Debit', 'group': 'Deferred Expenses'},
+    (15000, 15999): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Property, Plant & Equipment'},
+    (15100, 15199): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Buildings & Structures'},
+    (15200, 15299): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Machinery & Equipment'},
+    (15300, 15399): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Office & Facility Equipment'},
+    (15400, 15499): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Electrical & Utility Systems'},
+    (15500, 15599): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Construction in Progress'},
+    (15600, 15699): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Motor Vehicles'},
+    # Accumulated Depreciation (Contra-Asset)
+    (15110, 15119): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Credit', 'group': 'Accumulated Depreciation - Buildings'},
+    (15210, 15219): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Credit', 'group': 'Accumulated Depreciation - Machinery'},
+    (15310, 15319): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Credit', 'group': 'Accumulated Depreciation - Office Equipment'},
+    (15410, 15419): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Credit', 'group': 'Accumulated Depreciation - Electrical'},
+    (15510, 15519): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Credit', 'group': 'Accumulated Depreciation - Vehicles'},
+    (17000, 19999): {'type': 'Asset', 'sub_type': 'Non-Current Asset', 'normal': 'Debit', 'group': 'Intangible & Other Non-Current Assets'},
+
+    # Liabilities (20000-29999)
+    (20000, 20999): {'type': 'Liability', 'sub_type': 'Current Liability', 'normal': 'Credit', 'group': 'Accounts Payable'},
+    (21000, 21999): {'type': 'Liability', 'sub_type': 'Current Liability', 'normal': 'Credit', 'group': 'Short-term Loans'},
+    (22000, 22999): {'type': 'Liability', 'sub_type': 'Current Liability', 'normal': 'Credit', 'group': 'Accrued Expenses'},
+    (25000, 25999): {'type': 'Liability', 'sub_type': 'Non-Current Liability', 'normal': 'Credit', 'group': 'Long-term Bank Loans'},
+    (26000, 29999): {'type': 'Liability', 'sub_type': 'Non-Current Liability', 'normal': 'Credit', 'group': 'Other Non-Current Liabilities'},
+
+    # Equity (30000-39999)
+    (30000, 30999): {'type': 'Equity', 'sub_type': 'Equity', 'normal': 'Credit', 'group': 'Paid-up Capital'},
+    (31000, 31999): {'type': 'Equity', 'sub_type': 'Equity', 'normal': 'Credit', 'group': 'Share Capital'},
+    (32000, 32999): {'type': 'Equity', 'sub_type': 'Equity', 'normal': 'Credit', 'group': 'Retained Earnings'},
+    (33000, 39999): {'type': 'Equity', 'sub_type': 'Equity', 'normal': 'Credit', 'group': 'Other Equity'},
+
+    # Revenue (40000-49999)
+    (40000, 40999): {'type': 'Revenue', 'sub_type': 'Operating Revenue', 'normal': 'Credit', 'group': 'Sales Revenue'},
+    (41000, 41999): {'type': 'Revenue', 'sub_type': 'Non-Operating Revenue', 'normal': 'Credit', 'group': 'Other Income'},
+
+    # Cost of Goods Sold (50000-52999)
+    (50000, 50099): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Raw Materials'},
+    (50100, 50199): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Packaging'},
+    (50200, 50299): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Finished Goods'},
+    (53000, 53999): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Production Costs'},
+
+    # Operating Expenses - SG&A (60000-69999)
+    (60000, 60999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Marketing & Advertising'},
+    (61000, 61999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Office Salaries'},
+    (62000, 62999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Employee Benefits'},
+    (63000, 63999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Utilities'},
+    (64000, 64999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Transportation & Distribution'},
+    (65000, 65999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Facility & Office Supplies'},
+    (66000, 66999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Depreciation - SG&A'},
+    (67000, 67999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Inventory Write-offs'},
+    (68000, 68999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Other Operating Expenses'},
+    (69000, 69999): {'type': 'Expense', 'sub_type': 'Operating Expense', 'normal': 'Debit', 'group': 'Management Compensation'},
+
+    # Other Income/Expense (70000-79999)
+    (70000, 70999): {'type': 'Revenue', 'sub_type': 'Non-Operating Revenue', 'normal': 'Credit', 'group': 'Interest Income'},
+    (71000, 79999): {'type': 'Expense', 'sub_type': 'Non-Operating Expense', 'normal': 'Debit', 'group': 'Other Non-Operating Items'},
 }
 
-# Contra accounts have opposite normal balance
-CONTRA_ACCOUNTS = {1110, 1611, 1621, 1631, 1641, 1651, 3020, 4200, 4210}
+# Contra accounts have opposite normal balance (5-digit codes)
+CONTRA_ACCOUNTS = {
+    12300,  # Inventory Adjustments
+    15110, 15111,  # Accumulated Depreciation - Buildings
+    15210, 15211,  # Accumulated Depreciation - Machinery
+    15310, 15311,  # Accumulated Depreciation - Office Equipment
+    15410, 15411,  # Accumulated Depreciation - Electrical
+    15510, 15511,  # Accumulated Depreciation - Vehicles
+    30200,  # Owner's Drawings
+}
 
 
 class COAMapper:
@@ -184,41 +236,49 @@ class COAMapper:
     def classify_for_financial_statements(self, code):
         """
         Classify an account for financial statement placement.
-        
+
         Returns: dict with 'statement' (IS/BS), 'section', 'subsection', 'sign'
         """
         info = self.get_account(code)
         if not info:
             return None
-        
+
         code = int(code)
         t = info['type']
-        
+
         if t == 'Revenue':
-            section = 'Other Income' if 4100 <= code <= 4199 else 'Revenue'
+            # 5-digit codes: 41000-41999 = Other Income, 70000-70999 = Interest Income
+            section = 'Other Income' if (41000 <= code <= 41999 or 70000 <= code <= 70999) else 'Revenue'
             sign = -1 if code in CONTRA_ACCOUNTS else 1
             return {'statement': 'IS', 'section': section, 'sign': sign}
-        
+
         if t == 'Expense':
-            if 5010 <= code <= 5050:
+            # 5-digit codes for COGS: 50000-50299 (Inventory), 53000-53999 (Production)
+            if 50000 <= code <= 50299 or 53000 <= code <= 53999:
                 section = 'COGS'
-            elif 5100 <= code <= 5899:
+            # 5-digit codes for Operating Expenses: 60000-69999 (SG&A)
+            elif 60000 <= code <= 69999:
                 section = 'Operating Expenses'
-            else:
+            # Other expenses: 71000-79999 (Non-Operating)
+            elif 71000 <= code <= 79999:
                 section = 'Non-Operating Expenses'
+            else:
+                section = 'COGS'  # Default for 50xxx codes
             return {'statement': 'IS', 'section': section, 'sign': -1}
-        
+
         if t == 'Asset':
-            section = 'Non-Current Assets' if 1600 <= code <= 1999 else 'Current Assets'
+            # 5-digit codes: 15000-19999 = Non-Current, 10000-14999 = Current
+            section = 'Non-Current Assets' if 15000 <= code <= 19999 else 'Current Assets'
             sign = -1 if code in CONTRA_ACCOUNTS else 1
             return {'statement': 'BS', 'section': section, 'sign': sign}
-        
+
         if t == 'Liability':
-            section = 'Non-Current Liabilities' if 2100 <= code <= 2999 else 'Current Liabilities'
+            # 5-digit codes: 25000-29999 = Non-Current, 20000-24999 = Current
+            section = 'Non-Current Liabilities' if 25000 <= code <= 29999 else 'Current Liabilities'
             return {'statement': 'BS', 'section': section, 'sign': 1}
-        
+
         if t == 'Equity':
             sign = -1 if code in CONTRA_ACCOUNTS else 1
             return {'statement': 'BS', 'section': 'Equity', 'sign': sign}
-        
+
         return None

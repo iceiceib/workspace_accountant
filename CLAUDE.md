@@ -87,9 +87,9 @@ Module 1 (Journals) → Module 2 (Ledgers) → Module 5 (Unadjusted TB)
 
 All module scripts import from `scripts/utils/`:
 
-- **`coa_mapper.py` — `COAMapper`**: Loads `chart_of_accounts.xlsx`. Falls back to built-in defaults. Key methods: `get_type(code)`, `is_debit_normal(code)`, `classify_for_financial_statements(code)`. Account code ranges: 1xxx=Assets, 2xxx=Liabilities, 3xxx=Equity, 4xxx=Revenue, 5xxx=Expenses.
+- **`coa_mapper.py` — `COAMapper`**: Loads `chart_of_accounts.xlsx`. Falls back to built-in defaults. Key methods: `get_type(code)`, `is_debit_normal(code)`, `classify_for_financial_statements(code)`. Account code ranges: 10000-14999=Current Assets, 15000-19999=Non-Current Assets, 20000-24999=Current Liabilities, 25000-29999=Non-Current Liabilities, 30000-39999=Equity, 40000-49999=Revenue, 50000-69999=Expenses (COGS/SG&A), 70000-79999=Other Income/Non-Operating.
 
-- **`pc_cc_mapper.py` — `PCCCMapper`**: Loads `profit_cost_centers.xlsx` (Sheet 1: Profit Centers, Sheet 2: Cost Centers). PC required on accounts 4000–5999; CC required on 5000–5999. Critical NaN fix: always use `_clean(val)` with `math.isnan()` — never `val or ''` because `float('nan')` is truthy.
+- **`pc_cc_mapper.py` — `PCCCMapper`**: Loads `profit_cost_centers.xlsx` (Sheet 1: Profit Centers, Sheet 2: Cost Centers). PC required on accounts 40000–69999; CC required on 50000–69999. Critical NaN fix: always use `_clean(val)` with `math.isnan()` — never `val or ''` because `float('nan')` is truthy.
 
 - **`excel_reader.py`**: `read_xlsx(filepath, required_columns, optional_columns, date_columns)` → `dict(data=df, error, warnings)`. `filter_by_period(df, date_col, start, end)`.
 

@@ -13,7 +13,7 @@
 - **Applies to:** All data processing code
 
 ### Excel Account Code Normalization
-- **Issue:** Excel reads numeric account codes as floats (e.g., `1020.0` instead of `1020`)
+- **Issue:** Excel reads numeric account codes as floats (e.g., `10100.0` instead of `10100`)
 - **Solution:** Normalize with `str(int(float(str(val).strip())))`
 - **Applies to:** All modules reading account codes from Excel
 

@@ -51,15 +51,15 @@ from openpyxl.utils import get_column_letter
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
-BANK_ACCOUNT_CODE = '1020'    # Cash at Bank
-INTEREST_INCOME_CODE = '4110' # Interest Income
-AR_CODE = '1100'              # Accounts Receivable
-BANK_CHARGES_CODE = '5920'    # Bank Charges & Fees
-INSURANCE_CODE = '5700'       # Insurance Expense
-COMMS_CODE = '5220'           # Telephone & Internet (used for subscriptions)
-LOAN_CODE = '2100'            # Long-term Loans
-MISC_EXPENSE_CODE = '5900'    # Non-Operating Expenses (catch-all)
-OTHER_INCOME_CODE = '4199'    # Miscellaneous income placeholder
+BANK_ACCOUNT_CODE = '10100'   # Cash at Bank
+INTEREST_INCOME_CODE = '70000'  # Interest Income
+AR_CODE = '11000'             # Accounts Receivable
+BANK_CHARGES_CODE = '65000'   # Bank Charges & Fees (under SG&A)
+INSURANCE_CODE = '65000'      # Insurance Expense (under SG&A)
+COMMS_CODE = '65000'          # Telephone & Internet (used for subscriptions)
+LOAN_CODE = '25000'           # Long-term Loans
+MISC_EXPENSE_CODE = '68000'   # Other Operating Expenses (catch-all)
+OTHER_INCOME_CODE = '70000'   # Interest Income (catch-all for miscellaneous)
 
 DATE_PROXIMITY_DAYS = 3       # Max days apart for amount-only match
 

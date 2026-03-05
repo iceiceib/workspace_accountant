@@ -40,8 +40,8 @@ All journals share a common base structure with minor variations.
 | Invoice No | Text | Yes | Sales invoice reference |
 | Customer | Text | Yes | Customer name |
 | Description | Text | No | Transaction narration |
-| Debit Account | Text/Number | Yes | Account code to debit (usually 1100 AR) |
-| Credit Account | Text/Number | Yes | Account code to credit (usually 4010-4040 Revenue) |
+| Debit Account | Text/Number | Yes | Account code to debit (usually 11000 AR) |
+| Credit Account | Text/Number | Yes | Account code to credit (usually 40000-4040 Revenue) |
 | Amount | Number | Yes | Transaction amount |
 
 ### Purchases Journal
@@ -53,8 +53,8 @@ All journals share a common base structure with minor variations.
 | Reference | Text | Yes | Purchase order / supplier invoice reference |
 | Supplier | Text | Yes | Supplier name |
 | Description | Text | No | Transaction narration |
-| Debit Account | Text/Number | Yes | Account code to debit (e.g., 5010 Raw Materials, 1200 Inventory) |
-| Credit Account | Text/Number | Yes | Account code to credit (usually 2010 AP) |
+| Debit Account | Text/Number | Yes | Account code to debit (e.g., 50000 Raw Materials, 12000 Inventory) |
+| Credit Account | Text/Number | Yes | Account code to credit (usually 20000 AP) |
 | Amount | Number | Yes | Transaction amount |
 
 ### Cash Receipts Journal
@@ -66,8 +66,8 @@ All journals share a common base structure with minor variations.
 | Receipt No | Text | Yes | Receipt reference number |
 | Received From | Text | Yes | Payer name |
 | Description | Text | No | Transaction narration |
-| Debit Account | Text/Number | Yes | Account code to debit (usually 1020 Cash at Bank) |
-| Credit Account | Text/Number | Yes | Account code to credit (e.g., 1100 AR, 4010 Sales) |
+| Debit Account | Text/Number | Yes | Account code to debit (usually 10100 Cash at Bank) |
+| Credit Account | Text/Number | Yes | Account code to credit (e.g., 11000 AR, 40000 Sales) |
 | Amount | Number | Yes | Amount received |
 | Bank Account | Text | No | Which bank account (if multiple) |
 
@@ -80,8 +80,8 @@ All journals share a common base structure with minor variations.
 | Payment No | Text | Yes | Cheque number / transfer reference |
 | Paid To | Text | Yes | Payee name |
 | Description | Text | No | Transaction narration |
-| Debit Account | Text/Number | Yes | Account code to debit (e.g., 2010 AP, 5200 Rent) |
-| Credit Account | Text/Number | Yes | Account code to credit (usually 1020 Cash at Bank) |
+| Debit Account | Text/Number | Yes | Account code to debit (e.g., 20000 AP, 5200 Rent) |
+| Credit Account | Text/Number | Yes | Account code to credit (usually 10100 Cash at Bank) |
 | Amount | Number | Yes | Amount paid |
 | Bank Account | Text | No | Which bank account |
 
@@ -94,7 +94,7 @@ All journals share a common base structure with minor variations.
 | Employee / Department | Text | Yes | Employee name or department |
 | Description | Text | No | Narration |
 | Debit Account | Text/Number | Yes | Account code to debit (e.g., 5100 Salaries) |
-| Credit Account | Text/Number | Yes | Account code to credit (e.g., 1020 Bank, 2030 Accrued Wages) |
+| Credit Account | Text/Number | Yes | Account code to credit (e.g., 10100 Bank, 2030 Accrued Wages) |
 | Debit Amount | Number | Yes | Amount debited |
 | Credit Amount | Number | Yes | Amount credited |
 

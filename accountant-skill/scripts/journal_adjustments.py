@@ -60,22 +60,24 @@ from openpyxl.utils import get_column_letter
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-DEPR_EXPENSE_CODE = '5300'
+DEPR_EXPENSE_CODE = '66000'  # Depreciation Expenses - SG&A
 DEPR_EXPENSE_NAME = 'Depreciation Expense'
 
 # Maps asset account code → (accum depr code, accum depr name)
+# Using 5-digit codes for K&K Finance COA
 ACCUM_DEPR_MAP = {
-    1610: ('1611', 'Accum. Depr. — Buildings'),
-    1620: ('1621', 'Accum. Depr. — Plant & Machinery'),
-    1630: ('1631', 'Accum. Depr. — Furniture & Fixtures'),
-    1640: ('1641', 'Accum. Depr. — Vehicles'),
-    1650: ('1651', 'Accum. Depr. — Office Equipment'),
-    1700: ('1701', 'Accum. Depr. — Intangibles'),
+    15100: ('15110', 'Accum. Depr. — Buildings & Structures'),
+    15200: ('15210', 'Accum. Depr. — Machinery & Equipment'),
+    15300: ('15310', 'Accum. Depr. — Office & Facility Equipment'),
+    15400: ('15410', 'Accum. Depr. — Electrical & Utility Systems'),
+    15500: ('15510', 'Accum. Depr. — Motor Vehicles'),
+    15600: ('15610', 'Accum. Depr. — Construction in Progress'),
 }
 
 # Prepaid and accrual account ranges (for informational sheets)
-PREPAID_ACCOUNT_RANGE = (1300, 1499)
-ACCRUAL_ACCOUNT_CODES = {2020: 'Accrued Expenses', 2030: 'Accrued Wages'}
+# 5-digit codes: Prepayments 13000-14999, Accruals 22000-22999
+PREPAID_ACCOUNT_RANGE = (13000, 14999)
+ACCRUAL_ACCOUNT_CODES = {22000: 'Utility Bills', 22200: 'Wages Payable'}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
