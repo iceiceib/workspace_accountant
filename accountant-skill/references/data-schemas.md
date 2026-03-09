@@ -25,6 +25,26 @@ This document defines the expected column layout for every input .xlsx file. Whe
 
 **Alternate column names to accept:** "Code", "Acct Code", "No." → Account Code; "Name", "Description", "Account" → Account Name
 
+### Account Code Ranges
+
+| Range | Type | Sub-Type | Normal Balance |
+|-------|------|----------|----------------|
+| 10000-10999 | Asset | Current Asset - Cash | Debit |
+| 11000-11999 | Asset | Current Asset - Receivables | Debit |
+| 12000-12999 | Asset | Current Asset - Inventory | Debit |
+| 12400 | Asset | Current Asset - WIP Inventory | Debit |
+| 13000-14999 | Asset | Current Asset - Prepayments | Debit |
+| 15000-19999 | Asset | Non-Current Asset - PPE | Debit |
+| 20000-24999 | Liability | Current Liability | Credit |
+| 25000-29999 | Liability | Non-Current Liability | Credit |
+| 30000-39999 | Equity | Equity | Credit |
+| 40000-49999 | Revenue | Operating Revenue | Credit |
+| 50000-50299 | Expense | COGS - Inventory | Debit |
+| 50300-50399 | Expense | COGS - Work-in-Progress | Debit |
+| 53000-53999 | Expense | COGS - Production Costs | Debit |
+| 60000-69999 | Expense | Operating Expense (SG&A) | Debit |
+| 70000-79999 | Revenue/Expense | Other Income/Non-Operating | Mixed |
+
 ---
 
 ## Journals

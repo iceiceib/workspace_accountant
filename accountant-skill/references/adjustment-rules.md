@@ -109,7 +109,40 @@ Corrections for mistakes discovered during the period.
 | Omitted transaction | Record the entry as if it were made on the original date |
 | Duplicate entry | Reverse one of the duplicate entries |
 
-### 9. Bank Reconciliation Adjustments
+### 9. Work-in-Progress (WIP) Adjustments
+
+Manufacturing businesses need to track costs as raw materials are converted into finished goods. WIP adjustments record the flow of production costs.
+
+| Entry | Debit | Credit | Description |
+|-------|-------|--------|-------------|
+| Opening WIP | 50300 Opening WIP | 12400 WIP Inventory | Bring forward WIP from prior period |
+| Direct Materials | 50320 Direct Materials Used | 50010 Purchases Raw Materials | Materials issued to production |
+| Direct Materials | 50320 Direct Materials Used | 50110 Purchases Packaging | Packaging issued to production |
+| Direct Labor | 50330 Direct Labor to WIP | 53000 Direct Labor Wages | Labor costs allocated to WIP |
+| Overhead Applied | 50340 Overhead Applied | 53100 Machine Maintenance | Overhead allocated to WIP |
+| Overhead Applied | 50340 Overhead Applied | 53200 Production Utilities | Overhead allocated to WIP |
+| Overhead Applied | 50340 Overhead Applied | 53300 Depreciation - COGS | Overhead allocated to WIP |
+| Clear WIP | 50350 WIP to FG | 50300 Opening WIP | Clear opening WIP to transfer |
+| Clear WIP | 50350 WIP to FG | 50320 Direct Materials Used | Clear materials to transfer |
+| Clear WIP | 50350 WIP to FG | 50330 Direct Labor to WIP | Clear labor to transfer |
+| Clear WIP | 50350 WIP to FG | 50340 Overhead Applied | Clear overhead to transfer |
+| Closing WIP | 12400 WIP Inventory | 50310 Closing WIP | Record closing WIP asset |
+| Transfer to FG | 12200 Finished Goods | 50350 WIP to FG | COGM transferred to FG |
+
+**COGM Calculation:**
+```
+COGM = Opening WIP + Direct Materials + Direct Labor + Overhead Applied - Closing WIP
+```
+
+**Notes:**
+- WIP accumulation accounts (50320, 50330, 50340) should clear to zero at period-end
+- Account 50350 (WIP Transferred to FG) should equal the COGM amount
+- Closing WIP (50310) has a credit balance — it reduces total COGS
+- WIP Inventory (12400) appears on Balance Sheet as a Current Asset
+
+For detailed WIP accounting guidance, see `references/wip-flow-guide.md`.
+
+### 10. Bank Reconciliation Adjustments
 
 Entries identified during bank reconciliation (Module 3) that need to be recorded in the cash book.
 

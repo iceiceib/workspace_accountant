@@ -1,6 +1,6 @@
 # Accountant Skill — User Guide
 ### K&K Finance Team
-*Last updated: 2026-02-25 | Covers Modules 1–7*
+*Last updated: 2026-03-06 | Covers Modules 1–7 | Includes WIP Accounting*
 
 ---
 
@@ -17,7 +17,8 @@
 9. [Module 5 — Trial Balance](#9-module-5--trial-balance)
 10. [Module 6 — Financial Statements](#10-module-6--financial-statements)
 11. [Module 7 — Full-Cycle Validation](#11-module-7--full-cycle-validation)
-12. [Input File Formats](#12-input-file-formats)
+12. [Work-in-Progress (WIP) Accounting](#12-work-in-progress-wip-accounting)
+13. [Input File Formats](#13-input-file-formats)
 13. [Output Formatting Standards](#13-output-formatting-standards)
 14. [Troubleshooting & Common Errors](#14-troubleshooting--common-errors)
     - [Module 7 — Validation Failures](#module-7--validation-failures)
@@ -860,7 +861,135 @@ Validation complete: 5/5 passed, 0 failed, 0 warnings
 
 ---
 
-## 12. Input File Formats
+## 12. Work-in-Progress (WIP) Accounting
+
+### Overview
+
+The system supports **manufacturing accounting** with Work-in-Progress (WIP) tracking. This allows businesses that produce goods to track costs as raw materials are converted into finished goods through the production process.
+
+### WIP Account Structure
+
+WIP accounts are organized in the 50300-50399 range (COGS section) plus 12400 (Balance Sheet asset):
+
+| Code | Account Name | Type | Normal Balance | Purpose |
+|------|-------------|------|----------------|---------|
+| 12400 | Work-in-Progress Inventory | Asset | Debit | Balance Sheet — value of partially completed goods |
+| 50300 | Opening Work-in-Progress | COGS | Debit | Bring forward WIP from prior period |
+| 50310 | Closing Work-in-Progress | COGS | Credit | Recognize period-end WIP asset |
+| 50320 | Direct Materials Used | COGS | Debit | Materials transferred to production |
+| 50330 | Direct Labor Transferred to WIP | COGS | Debit | Labor costs allocated to WIP |
+| 50340 | Manufacturing Overhead Applied | COGS | Debit | Overhead costs allocated to WIP |
+| 50350 | WIP Transferred to Finished Goods | COGS | Credit | Cost of Goods Manufactured (COGM) |
+
+### Cost Flow Through WIP Accounts
+
+```
+Raw Materials → WIP → Finished Goods → Cost of Goods Sold
+     ↓           ↓          ↓            ↓
+  50010     50320      50350        (Sale)
+  50110     50330
+            50340
+```
+
+### Cost of Goods Manufactured (COGM) Formula
+
+```
+COGM = Opening WIP + Total Manufacturing Costs - Closing WIP
+
+Where:
+  Total Manufacturing Costs = Direct Materials + Direct Labor + Manufacturing Overhead
+
+Example (January 2026):
+  Opening WIP (50300)                        50,000
+  + Direct Materials Used (50320)           150,000
+  + Direct Labor Transferred (50330)         80,000
+  + Manufacturing Overhead Applied (50340)   45,000
+  -----------------------------------------
+  Total Manufacturing Costs in Process      325,000
+  - Closing WIP (50310)                      65,000
+  -----------------------------------------
+  COGM (via 50350)                          260,000
+```
+
+### Standard WIP Journal Entries
+
+| Entry | Description | Debit | Credit | Amount |
+|-------|-------------|-------|--------|--------|
+| JV-006 | Opening WIP balance from prior period | 50300 | 12400 | 50,000 |
+| JV-007 | Direct materials issued to production | 50320 | 50010/50110 | 150,000 |
+| JV-008 | Direct labor allocated to WIP | 50330 | 53000 | 80,000 |
+| JV-009 | Manufacturing overhead applied | 50340 | 53100/53200/53300 | 45,000 |
+| JV-010 | Clear WIP — transfer to Finished Goods | 50350 | 50300/50320/50330/50340 | 260,000 |
+| JV-011 | Record closing WIP per physical count | 12400 | 50310 | 65,000 |
+| JV-012 | Transfer COGM to Finished Goods | 12200 | 50350 | 260,000 |
+
+### How to Record WIP Entries
+
+Add these entries to your `general_journal.xlsx` file using the standard format:
+
+```
+Date       JV No   Description                          Dr Acct  Cr Acct   Dr Amt   Cr Amt   PC    CC
+2026-01-01  JV-006  Opening WIP balance from Dec2025     50300    12400     50000    50000   PC99
+2026-01-15  JV-007  Direct materials issued to production 50320   50010    120000   120000   PC01  CC101
+2026-01-15  JV-007  Direct materials issued to production 50320   50110     30000    30000   PC01  CC105
+2026-01-31  JV-008  Direct labor allocated to WIP        50330    53000     80000    80000   PC01  CC101
+2026-01-31  JV-009  Manufacturing overhead applied       50340    53100     15000    15000   PC99  CC201
+2026-01-31  JV-009  Manufacturing overhead applied       50340    53200     20000    20000   PC99  CC201
+2026-01-31  JV-009  Manufacturing overhead applied       50340    53300     10000    10000   PC99  CC201
+2026-01-31  JV-010  Clear WIP - transfer to FG           50350    50300     50000    50000   PC01  CC105
+2026-01-31  JV-010  Clear WIP - transfer to FG           50350    50320    150000   150000   PC01  CC105
+2026-01-31  JV-010  Clear WIP - transfer to FG           50350    50330     80000    80000   PC01  CC105
+2026-01-31  JV-010  Clear WIP - transfer to FG           50350    50340     45000    45000   PC01  CC105
+2026-01-31  JV-011  Record closing WIP per physical count 12400   50310     65000    65000   PC01  CC105
+2026-01-31  JV-012  Transfer COGM to Finished Goods      12200    50350    260000   260000   PC01  CC105
+```
+
+### WIP in Financial Statements
+
+**Balance Sheet:**
+- Account 12400 (Work-in-Progress Inventory) appears under Current Assets → Inventory
+- Reported alongside Raw Materials (12000) and Finished Goods (12200)
+
+**Income Statement:**
+- WIP accounts (50300-50350) appear in the COGS section
+- Net effect of WIP accounts flows into Cost of Goods Manufactured
+
+**COGS Calculation with WIP:**
+```
+  Opening Inventory - Raw Materials          XXX
+  + Purchases Raw Materials                  XXX
+  - Closing Inventory - Raw Materials       (XXX)
+  Opening Inventory - Packaging              XXX
+  + Purchases Packaging                      XXX
+  - Closing Inventory - Packaging           (XXX)
+  Opening Work-in-Progress (50300)           XXX
+  + Direct Materials Used (50320)            XXX
+  + Direct Labor (50330)                     XXX
+  + Overhead Applied (50340)                 XXX
+  - Closing Work-in-Progress (50310)        (XXX)
+  WIP Transferred to FG (50350)              XXX
+  Opening Inventory - Finished Goods         XXX
+  - Closing Inventory - Finished Goods      (XXX)
+  =========================================
+  Total Cost of Goods Sold                   XXX
+```
+
+### Supporting Documentation
+
+For detailed WIP accounting rules and examples, see:
+- `references/wip-flow-guide.md` — Complete WIP flow documentation with T-accounts and examples
+
+### WIP-Specific Validation Checks
+
+When WIP accounts are active, Module 7 validates:
+1. WIP accumulation accounts (50320, 50330, 50340) clear to zero at period-end
+2. COGM (50350 credit) equals sum of WIP clearing entries
+3. Closing WIP (50310 credit) matches physical count value
+4. WIP Inventory asset (12400) reflects closing WIP balance
+
+---
+
+## 13. Input File Formats
 
 All input files are `.xlsx` with a **single header row** at row 1. The scripts use flexible column matching — minor variations in column names (e.g. `Debit Amount` vs `Debit`) are handled automatically.
 

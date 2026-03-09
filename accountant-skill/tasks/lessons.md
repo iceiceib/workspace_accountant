@@ -86,3 +86,25 @@ M3 (Bank Recon) → M4 (Adjustments) → M5 (Adjusted TB)
    - M5: Both TBs balance
    - M6: BS balances, CF reconciles
    - M7: All checks PASS
+
+## WIP (Work-in-Progress) Accounting - Added 2026-03-06
+
+### Key Lessons
+1. WIP accounts (50300-50350, 12400) must be added to both `general_journal.xlsx` AND `general_ledger.xlsx`
+2. WIP accumulation accounts (50320, 50330, 50340) correctly clear to zero - they are filtered from TB
+3. COGM formula: Opening WIP + Direct Materials + Direct Labor + Overhead - Closing WIP
+4. Account 50350 (WIP Transferred to FG) should equal COGM amount
+5. Closing WIP (50310) has credit normal balance - it's a contra-expense that reduces COGS
+
+### Pre-existing Test Data Issues
+- The 1,120,000 TB imbalance existed before WIP entries were added
+- This is due to periodic inventory system without closing inventory entries recorded
+- WIP entries themselves are perfectly balanced
+
+### Files Updated for WIP
+- `references/chart-of-accounts.md` - Added WIP account structure
+- `references/wip-flow-guide.md` - New comprehensive WIP guide
+- `scripts/utils/coa_mapper.py` - Added 50300-50399 range to COGS classification
+- `data/Jan2026/chart_of_accounts.xlsx` - Added 6 WIP accounts
+- `data/Jan2026/general_journal.xlsx` - Added 12 WIP journal entries
+- `data/Jan2026/general_ledger.xlsx` - Added 18 WIP transaction rows

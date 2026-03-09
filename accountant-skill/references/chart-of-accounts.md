@@ -84,16 +84,39 @@ Format: `XXXXX` (5-digit codes) where:
 
 ### 50000 — Cost of Goods Sold
 
+#### Raw Materials
 | Code | Account Name | Sub-Type | Normal Balance |
 |------|-------------|----------|---------------|
 | 50000 | Opening Inventory - Raw Materials | COGS | Debit |
 | 50010 | Purchases Raw Materials | COGS | Debit |
 | 50020 | Closing Inventory - Raw Materials | COGS | Debit |
+
+#### Packaging Materials
+| Code | Account Name | Sub-Type | Normal Balance |
+|------|-------------|----------|---------------|
 | 50100 | Opening Inventory - Packaging | COGS | Debit |
 | 50110 | Purchases Packaging | COGS | Debit |
 | 50120 | Closing Inventory - Packaging | COGS | Debit |
+
+#### Finished Goods
+| Code | Account Name | Sub-Type | Normal Balance |
+|------|-------------|----------|---------------|
 | 50200 | Opening Inventory - Finished Goods | COGS | Debit |
 | 50220 | Closing Inventory - Finished Goods | COGS | Debit |
+
+#### Work-in-Progress (WIP)
+| Code | Account Name | Sub-Type | Normal Balance |
+|------|-------------|----------|---------------|
+| 50300 | Opening Work-in-Progress | COGS | Debit |
+| 50310 | Closing Work-in-Progress | COGS | Debit |
+| 50320 | Direct Materials Used | COGS | Debit |
+| 50330 | Direct Labor Transferred to WIP | COGS | Debit |
+| 50340 | Manufacturing Overhead Applied | COGS | Debit |
+| 50350 | WIP Transferred to Finished Goods | COGS | Debit |
+
+#### Production Overhead Costs
+| Code | Account Name | Sub-Type | Normal Balance |
+|------|-------------|----------|---------------|
 | 53000 | Direct Labor Wages | COGS | Debit |
 | 53100 | Machine Maintenance & Repair Expense | COGS | Debit |
 | 53200 | Production Utilities (Electricity & Water) | COGS | Debit |
@@ -140,7 +163,7 @@ When generating financial statements, map accounts as follows:
 ### Income Statement Mapping
 - **Revenue**: 40000 (Sales Revenue)
 - **Other Income**: 70000 (Interest Income)
-- **COGS**: 50000-50299, 53000-53999
+- **COGS**: 50000-50399, 53000-53999
 - **Operating Expenses (SG&A)**: 60000-69999
 
 ### Balance Sheet Mapping

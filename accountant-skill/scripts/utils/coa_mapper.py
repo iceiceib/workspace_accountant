@@ -46,10 +46,11 @@ DEFAULT_CLASSIFICATIONS = {
     (40000, 40999): {'type': 'Revenue', 'sub_type': 'Operating Revenue', 'normal': 'Credit', 'group': 'Sales Revenue'},
     (41000, 41999): {'type': 'Revenue', 'sub_type': 'Non-Operating Revenue', 'normal': 'Credit', 'group': 'Other Income'},
 
-    # Cost of Goods Sold (50000-52999)
+    # Cost of Goods Sold (50000-53999)
     (50000, 50099): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Raw Materials'},
     (50100, 50199): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Packaging'},
     (50200, 50299): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Inventory - Finished Goods'},
+    (50300, 50399): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Work-in-Progress'},
     (53000, 53999): {'type': 'Expense', 'sub_type': 'COGS', 'normal': 'Debit', 'group': 'Production Costs'},
 
     # Operating Expenses - SG&A (60000-69999)
@@ -253,8 +254,8 @@ class COAMapper:
             return {'statement': 'IS', 'section': section, 'sign': sign}
 
         if t == 'Expense':
-            # 5-digit codes for COGS: 50000-50299 (Inventory), 53000-53999 (Production)
-            if 50000 <= code <= 50299 or 53000 <= code <= 53999:
+            # 5-digit codes for COGS: 50000-50399 (Inventory + WIP), 53000-53999 (Production)
+            if 50000 <= code <= 50399 or 53000 <= code <= 53999:
                 section = 'COGS'
             # 5-digit codes for Operating Expenses: 60000-69999 (SG&A)
             elif 60000 <= code <= 69999:
