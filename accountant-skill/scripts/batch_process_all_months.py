@@ -440,8 +440,11 @@ def create_trial_balance_xlsx(coa, balances, period_name, start_date, end_date, 
     return total_period_dr, total_period_cr
 
 
-def create_financial_statements_xlsx(coa, balances, period_name, start_date, end_date, output_path):
-    """Create Financial Statements Excel file."""
+def create_financial_statements_xlsx(coa, balances, period_name, start_date, end_date, output_path, accumulated_retained_earnings=0):
+    """Create Financial Statements Excel file.
+
+    Returns: net_profit (to be accumulated for Retained Earnings)
+    """
     wb = Workbook()
 
     # Income Statement
@@ -451,33 +454,35 @@ def create_financial_statements_xlsx(coa, balances, period_name, start_date, end
     ws_is['A1'].font = Font(bold=True, size=14)
     ws_is['A2'] = f'For the period {start_date} to {end_date}'
 
-    # Calculate totals
+    # Calculate totals from period movements (not closing balances)
     revenue = 0
     cogs = 0
     opex = 0
     other_income = 0
 
     for code, data in balances.items():
-        closing = data['closing']
-        period_cr = data['period_cr']
-        period_dr = data['period_dr']
+        # Use period movements for income statement
+        period_dr = data.get('period_dr', 0)
+        period_cr = data.get('period_cr', 0)
 
-        if code == 40000:  # Sales Revenue
-            revenue = data['closing']  # Credit balance (negative for calculation)
-        elif code in [50000, 50010, 50020, 50100, 50110, 50120, 50200, 50220, 53000, 53100, 53200, 53300]:  # COGS
-            cogs += data['closing']
-        elif code in [60000, 61000, 62000, 63000, 64000, 65000, 66000, 67000, 68000, 69000]:  # SG&A
-            opex += data['closing']
-        elif code == 70000:  # Interest Income
-            other_income = data['closing']
+        if code == 40000:  # Sales Revenue - credit balance, revenue = credits
+            revenue = period_cr - period_dr
+        elif code in [50000, 50010, 50020, 50100, 50110, 50120, 50200, 50220, 53000, 53100, 53200, 53300]:  # COGS - debit balance
+            cogs += period_dr - period_cr
+        elif code in [60000, 61000, 62000, 63000, 64000, 65000, 66000, 67000, 68000, 69000]:  # SG&A - debit balance
+            opex += period_dr - period_cr
+        elif code == 70000:  # Interest Income - credit balance
+            other_income = period_cr - period_dr
+        elif code in [80000, 81000]:  # Other expenses - debit balance
+            opex += period_dr - period_cr
 
-    gross_profit = -revenue - cogs  # Revenue is negative (credit), COGS is positive (debit)
+    gross_profit = revenue - cogs
     operating_profit = gross_profit - opex
-    net_profit = operating_profit - other_income
+    net_profit = operating_profit + other_income
 
     row = 4
     ws_is.cell(row=row, column=1, value='Sales Revenue').font = Font(bold=True)
-    ws_is.cell(row=row, column=2, value=abs(-revenue))
+    ws_is.cell(row=row, column=2, value=revenue)
     ws_is.cell(row=row, column=2).number_format = '#,##0.00'
     row += 2
 
@@ -504,7 +509,7 @@ def create_financial_statements_xlsx(coa, balances, period_name, start_date, end
     row += 2
 
     ws_is.cell(row=row, column=1, value='Other Income (Interest)')
-    ws_is.cell(row=row, column=2, value=abs(other_income))
+    ws_is.cell(row=row, column=2, value=other_income)
     ws_is.cell(row=row, column=2).number_format = '#,##0.00'
     row += 1
 
@@ -571,6 +576,7 @@ def create_financial_statements_xlsx(coa, balances, period_name, start_date, end
     ws_bs.cell(row=row, column=1, value='EQUITY').font = Font(bold=True)
     row += 1
 
+    # Equity accounts from COA (e.g., Capital)
     for code in sorted(balances.keys()):
         data = balances[code]
         if data['type'] == 'Equity':
@@ -582,19 +588,29 @@ def create_financial_statements_xlsx(coa, balances, period_name, start_date, end
                 total_equity += closing
                 row += 1
 
+    # Add Retained Earnings (accumulated net profit/loss)
+    retained_earnings = accumulated_retained_earnings + net_profit
+    ws_bs.cell(row=row, column=1, value='Retained Earnings')
+    ws_bs.cell(row=row, column=2, value=retained_earnings)
+    ws_bs.cell(row=row, column=2).number_format = '#,##0.00'
+    total_equity += retained_earnings
+    row += 1
+
     ws_bs.cell(row=row, column=1, value='TOTAL EQUITY').font = Font(bold=True)
-    ws_bs.cell(row=row, column=2, value=abs(total_equity)).font = Font(bold=True)
+    ws_bs.cell(row=row, column=2, value=total_equity).font = Font(bold=True)
     ws_bs.cell(row=row, column=2).number_format = '#,##0.00'
     row += 2
 
     ws_bs.cell(row=row, column=1, value='TOTAL LIABILITIES & EQUITY').font = Font(bold=True)
-    ws_bs.cell(row=row, column=2, value=abs(total_liabilities + total_equity)).font = Font(bold=True)
+    ws_bs.cell(row=row, column=2, value=total_liabilities + total_equity).font = Font(bold=True)
     ws_bs.cell(row=row, column=2).number_format = '#,##0.00'
 
     ws_bs.column_dimensions['A'].width = 40
     ws_bs.column_dimensions['B'].width = 15
 
     wb.save(output_path)
+
+    return net_profit
 
 
 def main():
@@ -618,6 +634,9 @@ def main():
 
     # Initialize opening balances (all zeros for Feb 2025)
     opening_balances = {code: 0.0 for code in coa.keys()}
+
+    # Initialize retained earnings (accumulated net profit/loss)
+    retained_earnings = 0.0
 
     results = []
 
@@ -666,23 +685,26 @@ def main():
 
         # Create Financial Statements
         print(f"  Creating Financial Statements...")
-        create_financial_statements_xlsx(
+        net_profit = create_financial_statements_xlsx(
             coa, balances, period_name, start_date, end_date,
-            output_dir / f'financial_statements_{period_name}.xlsx'
+            output_dir / f'financial_statements_{period_name}.xlsx',
+            accumulated_retained_earnings=retained_earnings
         )
+        print(f"    Net Profit: {net_profit:,.2f}")
 
         # Chain balances to next period
         opening_balances = ending_balances.copy()
-        results.append((period_name, total_dr, total_cr, abs(total_dr - total_cr) < 0.01))
+        retained_earnings += net_profit  # Accumulate retained earnings
+        results.append((period_name, total_dr, total_cr, abs(total_dr - total_cr) < 0.01, net_profit))
 
     # Summary
     print("\n" + "="*60)
     print("SUMMARY")
     print("="*60)
-    print(f"{'Period':12} | {'Period Dr':>15} | {'Period Cr':>15} | Balanced")
-    print("-"*60)
-    for period_name, dr, cr, balanced in results:
-        print(f"{period_name:12} | {dr:>15,.2f} | {cr:>15,.2f} | {'YES' if balanced else 'NO'}")
+    print(f"{'Period':12} | {'Period Dr':>15} | {'Period Cr':>15} | {'Net Profit':>15} | Balanced")
+    print("-"*80)
+    for period_name, dr, cr, balanced, np_val in results:
+        print(f"{period_name:12} | {dr:>15,.2f} | {cr:>15,.2f} | {np_val:>15,.2f} | {'YES' if balanced else 'NO'}")
 
 
 if __name__ == '__main__':
