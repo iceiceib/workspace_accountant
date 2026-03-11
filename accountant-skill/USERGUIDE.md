@@ -1,6 +1,6 @@
 # Accountant Skill — User Guide
 ### K&K Finance Team
-*Last updated: 2026-03-06 | Covers Modules 1–7 | Includes WIP Accounting*
+*Last updated: 2026-03-11 | Covers Modules 1–7 + Inventory Tracking*
 
 ---
 
@@ -18,11 +18,12 @@
 10. [Module 6 — Financial Statements](#10-module-6--financial-statements)
 11. [Module 7 — Full-Cycle Validation](#11-module-7--full-cycle-validation)
 12. [Work-in-Progress (WIP) Accounting](#12-work-in-progress-wip-accounting)
-13. [Input File Formats](#13-input-file-formats)
-13. [Output Formatting Standards](#13-output-formatting-standards)
-14. [Troubleshooting & Common Errors](#14-troubleshooting--common-errors)
+13. [Inventory Sub-Ledger Tracking](#13-inventory-sub-ledger-tracking)
+14. [Input File Formats](#14-input-file-formats)
+15. [Output Formatting Standards](#15-output-formatting-standards)
+16. [Troubleshooting & Common Errors](#16-troubleshooting--common-errors)
     - [Module 7 — Validation Failures](#module-7--validation-failures)
-15. [Quick Reference — All Commands](#quick-reference--all-commands)
+17. [Quick Reference — All Commands](#quick-reference--all-commands)
 
 ---
 
@@ -989,7 +990,236 @@ When WIP accounts are active, Module 7 validates:
 
 ---
 
-## 13. Input File Formats
+## 13. Inventory Sub-Ledger Tracking
+
+### Overview
+
+The inventory sub-ledger system tracks **both quantity and value** for every inventory item, maintaining running balances and calculating **Weighted Average Cost (WAC)** automatically. This provides:
+
+- Per-item inventory tracking with full transaction history
+- Automatic WAC calculation when purchases are recorded
+- Inventory reconciliation to GL control accounts
+- Cost of materials used calculation for COGS
+
+### Inventory Account Structure
+
+| Account Range | Category | Sub-Ledger File |
+|---------------|----------|-----------------|
+| 12000-12099 | Raw Materials | `raw_materials_ledger.xlsx` |
+| 12100-12199 | Packaging Materials | `packaging_ledger.xlsx` |
+| 12200-12299 | Finished Goods | `finished_goods_ledger.xlsx` |
+| 12400-12499 | Work-in-Progress | `wip_ledger.xlsx` |
+
+### How to Set Up Inventory Sub-Ledgers
+
+#### Step 1: Generate Inventory Ledger Files
+
+Run the inventory ledger generator script to create the template files:
+
+```bash
+cd accountant-skill
+
+python scripts/create_inventory_ledgers.py \
+  data/Jan2026 \
+  2026-01-01 \
+  2026-01-31
+```
+
+This creates:
+- `inventory_items.xlsx` — Master list of all inventory items
+- `raw_materials_ledger.xlsx` — Individual item sheets for raw materials
+- `packaging_ledger.xlsx` — Individual item sheets for packaging materials
+
+#### Step 2: Verify Opening Balances
+
+Open each ledger file and check the **Dashboard** sheet. The opening quantities are imported from your existing tracker files. If values show 0, you'll need to enter opening values manually.
+
+For each item sheet:
+- **Opening Balance** row shows the quantity and value at period start
+- **WAC (Weighted Average Cost)** is calculated automatically
+
+#### Step 3: Record Purchases During the Period
+
+When materials are purchased, record them in the item's sheet:
+
+| Column | What to enter |
+|--------|---------------|
+| Date | Purchase date |
+| Reference | PO number or supplier invoice |
+| Description | Supplier name or details |
+| Received Qty | Units purchased |
+| Unit Cost | Cost per unit (including any carriage inward) |
+| Received Value | Auto-calculated: Qty × Unit Cost |
+
+**The system automatically:**
+- Recalculates WAC after each purchase
+- Updates the running balance
+- Prepares values for production issues
+
+#### Step 4: Record Materials Issued to Production
+
+When materials are used in production, create an issue transaction:
+
+| Column | What to enter |
+|--------|---------------|
+| Date | Issue date |
+| Reference | Production batch or job number |
+| Description | "Issued to production" or batch details |
+| Issued Qty | Units consumed |
+| Issued Value | Auto-calculated: Qty × Current WAC |
+
+### Weighted Average Cost (WAC) Calculation
+
+The system uses the perpetual WAC method:
+
+```
+WAC = (Opening Stock Value + Purchases Value) / (Opening Stock Qty + Purchases Qty)
+
+Cost of Goods Issued = Units Issued × WAC
+Closing Stock Value = Closing Stock Qty × WAC
+```
+
+**Example:**
+```
+Opening Stock:     100 units @ 150 each = 15,000
+Purchase:          200 units @ 165 each = 33,000
+                   ─────────────────────────────
+Total:             300 units             48,000
+WAC = 48,000 / 300 = 160 per unit
+
+Issued to Production: 150 units × 160 = 24,000
+Closing Stock:         150 units × 160 = 24,000
+```
+
+### Processing Inventory Transactions
+
+After entering purchases and production usage, run the inventory processor:
+
+```bash
+python scripts/process_inventory.py \
+  data/Jan2026 \
+  2026-01-01 \
+  2026-01-31
+```
+
+This script:
+1. Reads all inventory sub-ledger files
+2. Processes purchases (if in `purchases_journal.xlsx` with Item Code column)
+3. Processes production usage (if `production_usage.xlsx` exists)
+4. Calculates closing balances and WAC for each item
+5. Generates `inventory_summary_[PERIOD].xlsx`
+
+### Production Usage File (Optional)
+
+For automatic processing of materials issued to production, create `production_usage.xlsx`:
+
+| Column | Required | Description |
+|--------|----------|-------------|
+| Date | Yes | Issue date |
+| Item Code | Yes | Inventory item code (e.g., 12001, 12100) |
+| Reference | No | Batch or job number |
+| Description | No | Narration |
+| Quantity Used | Yes | Units issued |
+
+### Inventory Reconciliation
+
+The inventory sub-ledger totals must reconcile to GL control accounts:
+
+| Sub-Ledger Total | Must Equal | GL Control Account |
+|------------------|------------|-------------------|
+| Sum of all RM items' closing values | = | 12000 Inventory - Raw Materials |
+| Sum of all packaging items' closing values | = | 12100 Inventory - Packaging |
+
+Module 2 (`summarize_ledgers.py`) now includes an **Inventory Summary** sheet that:
+- Lists all items with opening, movements, and closing values
+- Compares sub-ledger totals to GL balances
+- Flags mismatches for investigation
+
+### Inventory in Module 4 (Journal Adjustments)
+
+Module 4 now includes an **Inventory** reference sheet showing:
+- All items with materials issued to production
+- Total cost of raw materials used (flows to account 50320)
+- Total cost of packaging used (flows to account 50110)
+
+This is for reference — the actual journal entries for materials used should be recorded in `general_journal.xlsx` or `production_usage.xlsx`.
+
+### Inventory Item Codes
+
+The standard item codes used in the system:
+
+**Raw Materials (12001-12018):**
+
+| Code | Item Name | Unit |
+|------|-----------|------|
+| 12001 | Coffee Beans (Premium) | Bag |
+| 12002 | Sugar | Bag |
+| 12003 | Milk Powder | Bag |
+| 12004 | Creamer | Bag |
+| 12005 | Tea Leaves | Gram |
+| 12006 | Condensed Milk | Gram |
+| 12007 | Evaporated Milk | Gram |
+| 12008 | Flavoring Syrup | Bottles |
+| 12009 | Chocolate Powder | Gram |
+| 12010 | Honey | Gram |
+| 12011 | Butter | Gram |
+| 12012 | Flour | Bag |
+| 12013 | Baking Powder | Gram |
+| 12014 | Salt | Gram |
+| 12015 | Vanilla Extract | Gram |
+| 12016 | Eggs | Pack |
+| 12017 | Oil | Gram |
+| 12018 | Other Ingredients | Gram |
+
+**Packaging Materials (12100-12106):**
+
+| Code | Item Name | Unit |
+|------|-----------|------|
+| 12100 | Packing Bags | Pack |
+| 12101 | Small Cups | Pack |
+| 12102 | Large Cups | Pack |
+| 12103 | Lids | Pack |
+| 12104 | Straws | Pack |
+| 12105 | Napkins | Pack |
+| 12106 | Carry Bags | Pack |
+
+### Best Practices
+
+1. **Record purchases promptly** — Enter purchases as they happen to maintain accurate WAC
+2. **Record production issues daily** — Track materials used to maintain inventory accuracy
+3. **Reconcile monthly** — Compare sub-ledger totals to GL after each period close
+4. **Investigate differences** — If sub-ledger ≠ GL, trace the discrepancy in transaction history
+5. **Physical counts** — Perform periodic physical counts and adjust the ledger as needed
+
+### Inventory vs WIP
+
+| Inventory Sub-Ledger | WIP Accounting |
+|----------------------|----------------|
+| Tracks materials in stock | Tracks materials in production |
+| Uses WAC for valuation | Uses actual costs allocated |
+| Balance sheet asset | Work-in-progress asset |
+| Issues go to WIP or COGS | Completed goods go to Finished Goods |
+
+**Flow:**
+```
+Raw Materials Inventory (12000)
+        │
+        │ Materials issued to production
+        ▼
+Work-in-Progress (12400)
+        │
+        │ Production completed
+        ▼
+Finished Goods Inventory (12200)
+        │
+        │ Goods sold
+        ▼
+Cost of Goods Sold (50000-50399)
+```
+
+---
+
+## 14. Input File Formats
 
 All input files are `.xlsx` with a **single header row** at row 1. The scripts use flexible column matching — minor variations in column names (e.g. `Debit Amount` vs `Debit`) are handled automatically.
 
@@ -1047,9 +1277,45 @@ All input files are `.xlsx` with a **single header row** at row 1. The scripts u
 | Accumulated Depreciation | No | Total depreciation to date |
 | Status | No | `Active` (default) or `Disposed` |
 
+**Inventory Items Master** (`inventory_items.xlsx`):
+
+| Column | Required | Notes |
+|---|---|---|
+| Item Code | Yes | Unique item identifier (e.g., 12001, 12100) |
+| Item Name | Yes | Item description |
+| Account Code | Yes | GL account code (12000 for RM, 12100 for Packaging) |
+| Unit Measure | Yes | Unit of measurement (Bag, Pack, Gram, Bottle) |
+| Category | No | Category for grouping (Raw Materials, Packaging) |
+| Status | No | `Active` (default) or `Inactive` |
+
+**Inventory Sub-Ledger** (per-item sheets in `raw_materials_ledger.xlsx` or `packaging_ledger.xlsx`):
+
+| Column | Required | Notes |
+|---|---|---|
+| Date | Yes | Transaction date |
+| Reference | Yes | PO/Invoice/Production batch reference |
+| Description | No | Narration |
+| Received Qty | No | Units received (for purchases) |
+| Issued Qty | No | Units issued (to production) |
+| Balance Qty | Yes | Running quantity balance |
+| Unit Cost | Yes | WAC per unit |
+| Received Value | No | Value of goods received |
+| Issued Value | No | Value of goods issued (at WAC) |
+| Balance Value | Yes | Running value balance |
+
+**Production Usage** (`production_usage.xlsx` — optional):
+
+| Column | Required | Notes |
+|---|---|---|
+| Date | Yes | Issue date |
+| Item Code | Yes | Inventory item code |
+| Reference | No | Production batch/job number |
+| Description | No | Narration |
+| Quantity Used | Yes | Units issued to production |
+
 ---
 
-## 13. Output Formatting Standards
+## 15. Output Formatting Standards
 
 All output files follow a consistent professional format:
 
@@ -1077,7 +1343,7 @@ All output files follow a consistent professional format:
 
 ---
 
-## 14. Troubleshooting & Common Errors
+## 16. Troubleshooting & Common Errors
 
 ### "File not found" errors
 
@@ -1290,8 +1556,16 @@ python scripts/generate_financials.py \
 python scripts/validate_accounting.py \
   data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/audit_validation_Jan2026.xlsx
+
+# INVENTORY — Create Inventory Sub-Ledgers
+python scripts/create_inventory_ledgers.py \
+  data/Jan2026 2026-01-01 2026-01-31
+
+# INVENTORY — Process Inventory Transactions
+python scripts/process_inventory.py \
+  data/Jan2026 2026-01-01 2026-01-31
 ```
 
 ---
 
-*All 7 modules are now complete. The accounting cycle is fully automated from source journals through financial statements with end-to-end validation.*
+*All 7 modules are now complete with inventory sub-ledger tracking. The accounting cycle is fully automated from source journals through financial statements with end-to-end validation.*

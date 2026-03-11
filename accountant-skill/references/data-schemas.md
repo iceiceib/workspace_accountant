@@ -6,8 +6,9 @@ This document defines the expected column layout for every input .xlsx file. Whe
 1. [Chart of Accounts](#chart-of-accounts)
 2. [Journals (Books of Prime Entry)](#journals)
 3. [Ledgers](#ledgers)
-4. [Bank Statement](#bank-statement)
-5. [Fixed Asset Register](#fixed-asset-register)
+4. [Inventory Sub-Ledgers](#inventory-sub-ledgers)
+5. [Bank Statement](#bank-statement)
+6. [Fixed Asset Register](#fixed-asset-register)
 
 ---
 
@@ -223,6 +224,128 @@ May have multiple sheets (one per customer) or a single sheet.
 | Debit | Number | No | Drawings, losses |
 | Credit | Number | No | Capital introduced, earnings |
 | Balance | Number | No | Running balance |
+
+---
+
+## Inventory Sub-Ledgers
+
+Inventory sub-ledgers track both **quantity** and **value** for each inventory item. They reconcile to GL control accounts 12000 (Raw Materials) and 12100 (Packaging Materials).
+
+### Inventory Items Master
+**File:** `inventory_items.xlsx`
+
+Master list of all inventory items with their account codes and unit measures.
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| Item Code | Text/Number | Yes | Unique item identifier (e.g., 12001, 12100) |
+| Item Name | Text | Yes | Item description |
+| Account Code | Text/Number | Yes | GL account code (12000-12099 for raw materials, 12100-12199 for packaging) |
+| Account Name | Text | No | GL account name |
+| Unit Measure | Text | Yes | Unit of measurement (Bag, Pack, Gram, Bottle, etc.) |
+| Category | Text | No | Category for grouping (Raw Materials, Packaging, etc.) |
+| Status | Text | No | Active / Inactive |
+
+### Raw Materials Ledger
+**File:** `raw_materials_ledger.xlsx`
+
+Sub-ledger for raw materials (account codes 12000-12099). May have multiple sheets (one per item) or a single consolidated sheet.
+
+**Per-Item Sheet Structure:**
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| Date | Date | Yes | Transaction date |
+| Reference | Text | Yes | PO/Invoice/Production reference |
+| Description | Text | No | Narration (supplier, production batch, etc.) |
+| Received Qty | Number | No | Units received (increases inventory) |
+| Issued Qty | Number | No | Units issued to production (decreases inventory) |
+| Balance Qty | Number | Yes | Running quantity balance |
+| Unit Cost | Number | Yes | Weighted Average Cost per unit |
+| Received Value | Number | No | Value of goods received (Received Qty × Unit Cost) |
+| Issued Value | Number | No | Value of goods issued (Issued Qty × WAC) |
+| Balance Value | Number | Yes | Running value balance |
+
+**Accounting Treatment:**
+- **Received (Dr)**: Increases inventory quantity and value
+- **Issued (Cr)**: Decreases inventory (transferred to WIP/COGS)
+- **Normal Balance**: Debit (asset)
+
+### Packaging Materials Ledger
+**File:** `packaging_ledger.xlsx`
+
+Sub-ledger for packaging materials (account codes 12100-12199). Same structure as Raw Materials Ledger.
+
+**Per-Item Sheet Structure:**
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| Date | Date | Yes | Transaction date |
+| Reference | Text | Yes | PO/Invoice/Production reference |
+| Description | Text | No | Narration |
+| Received Qty | Number | No | Units received |
+| Issued Qty | Number | No | Units issued to production |
+| Balance Qty | Number | Yes | Running quantity balance |
+| Unit Cost | Number | Yes | Weighted Average Cost per unit |
+| Received Value | Number | No | Value of goods received |
+| Issued Value | Number | No | Value of goods issued |
+| Balance Value | Number | Yes | Running value balance |
+
+### Work-in-Progress Ledger
+**File:** `wip_ledger.xlsx`
+
+Sub-ledger for WIP inventory (account code 12400). Tracks production costs accumulated during manufacturing.
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| Date | Date | Yes | Transaction date |
+| Reference | Text | Yes | Production batch/job reference |
+| Description | Text | No | Narration |
+| Direct Materials | Number | No | Raw materials used (from RM Ledger) |
+| Direct Labor | Number | No | Labor costs allocated |
+| Overhead Applied | Number | No | Manufacturing overhead allocated |
+| Completed Goods | Number | No | Cost of goods completed (Cr - transferred to FG) |
+| Balance | Number | Yes | Running WIP balance |
+
+### Finished Goods Ledger
+**File:** `finished_goods_ledger.xlsx`
+
+Sub-ledger for finished goods inventory (account code 12200).
+
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| Date | Date | Yes | Transaction date |
+| Reference | Text | Yes | Production batch/Sales reference |
+| Description | Text | No | Narration |
+| Produced Qty | Number | No | Units produced (from WIP) |
+| Sold Qty | Number | No | Units sold (to COGS) |
+| Balance Qty | Number | Yes | Running quantity |
+| Unit Cost | Number | Yes | Cost per unit |
+| Produced Value | Number | No | Value of goods produced |
+| Sold Value | Number | No | Cost of goods sold |
+| Balance Value | Number | Yes | Running value balance |
+
+### Inventory Reconciliation
+
+Sub-ledger totals must reconcile to GL control accounts:
+
+| Sub-Ledger | GL Control Account | Reconciliation |
+|------------|-------------------|----------------|
+| Raw Materials Ledger (sum of all items) | 12000 Inventory - Raw Materials | Total Balance Value = GL Balance |
+| Packaging Ledger (sum of all items) | 12100 Inventory - Packaging | Total Balance Value = GL Balance |
+| WIP Ledger | 12400 Work-in-Progress | Balance = GL Balance |
+| Finished Goods Ledger | 12200 Inventory - Finished Goods | Total Balance Value = GL Balance |
+
+### Weighted Average Cost (WAC) Calculation
+
+```
+WAC = (Opening Stock Value + Purchases Value) / (Opening Stock Qty + Purchases Qty)
+
+Cost of Goods Issued = Units Issued × WAC
+Closing Stock Value = Closing Stock Qty × WAC
+```
+
+**Note:** WAC is recalculated after each purchase. Issues to production use the current WAC.
 
 ---
 
