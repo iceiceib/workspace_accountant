@@ -8,7 +8,9 @@
 - [x] Update data-schemas.md with WIP account code ranges
 - [x] Update lessons.md with WIP implementation notes
 - [x] Run full accounting cycle to verify WIP entries
-- [ ] Update adjustment-rules.md with WIP adjustment examples
+- [x] Update adjustment-rules.md with WIP adjustment examples
+- [x] Fix account code ranges in pc_cc_mapper.py (4-digit to 5-digit)
+- [x] Fix control account codes in summarize_ledgers.py (4-digit to 5-digit)
 
 ## Random thoughts
 

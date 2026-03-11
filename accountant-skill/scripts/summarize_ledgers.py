@@ -23,12 +23,9 @@ from utils.excel_writer import (create_workbook, add_sheet, write_title, write_h
                                  THIN_BORDER)
 from openpyxl.styles import PatternFill, Font
 from utils.coa_mapper import COAMapper
+from utils.constants import AR_GL_ACCOUNT, AP_GL_ACCOUNT, CASH_GL_ACCOUNTS
 
 
-# ── Control account codes ─────────────────────────────────────────────────────
-AR_GL_ACCOUNT   = 1100
-AP_GL_ACCOUNT   = 2010
-CASH_GL_ACCOUNTS = [1020, 1021, 1022]
 MOVEMENT_FLAG_PCT = 50.0   # Flag accounts with >50% balance movement
 
 # ── Ledger file name patterns ─────────────────────────────────────────────────
@@ -352,9 +349,9 @@ def write_dashboard(wb, gl_accounts, ar_entities, ap_entities, cash_banks,
     gl_cash = sum(gl_accounts.get(c, {}).get('closing', 0) for c in CASH_GL_ACCOUNTS)
 
     checks = [
-        ('Accounts Receivable (1100)', gl_ar,   ar_total,   ar_entities),
-        ('Accounts Payable (2010)',    gl_ap,   ap_total,   ap_entities),
-        ('Cash at Bank (1020)',        gl_cash, cash_total, cash_banks),
+        ('Accounts Receivable (11000)', gl_ar,   ar_total,   ar_entities),
+        ('Accounts Payable (20000)',    gl_ap,   ap_total,   ap_entities),
+        ('Cash at Bank (10100)',        gl_cash, cash_total, cash_banks),
     ]
     for label, gl_bal, sub_total, entities in checks:
         if gl_bal is None or not entities:
@@ -448,9 +445,9 @@ def write_control_account_sheet(wb, gl_accounts, ar_total, ap_total, cash_total,
     gl_cash = sum(gl_accounts.get(c, {}).get('closing', 0) for c in CASH_GL_ACCOUNTS)
 
     checks = [
-        ('AR — Accts Receivable (1100)', gl_ar,   ar_total,   bool(ar_entities)),
-        ('AP — Accts Payable (2010)',     gl_ap,   ap_total,   bool(ap_entities)),
-        ('Cash at Bank (1020–1022)',      gl_cash, cash_total, bool(cash_banks)),
+        ('AR — Accts Receivable (11000)', gl_ar,   ar_total,   bool(ar_entities)),
+        ('AP — Accts Payable (20000)',     gl_ap,   ap_total,   bool(ap_entities)),
+        ('Cash at Bank (10100)',           gl_cash, cash_total, bool(cash_banks)),
     ]
     all_ok = True
     for label, gl_bal, sub_total, has_data in checks:

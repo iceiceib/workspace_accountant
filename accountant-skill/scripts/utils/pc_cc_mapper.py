@@ -8,6 +8,21 @@ Falls back to built-in defaults when no file is provided.
 import math
 from pathlib import Path
 
+# Import centralized constants
+try:
+    from utils.constants import PC_REQUIRED_RANGES, CC_REQUIRED_RANGES, ACCOUNT_SEGMENTS
+except ImportError:
+    # Fallback if constants not available
+    PC_REQUIRED_RANGES = [(40000, 49999), (50000, 69999)]
+    CC_REQUIRED_RANGES = [(50000, 69999)]
+    ACCOUNT_SEGMENTS = {
+        'revenue':         (40000, 40999),
+        'revenue_contra':  (41000, 41999),
+        'cogs':            (50000, 53999),
+        'opex':            (60000, 68999),
+        'nonop':           (70000, 79999),
+    }
+
 
 def _clean(val):
     """Return val as uppercase stripped string; treat None/NaN/empty as ''."""
@@ -40,26 +55,6 @@ DEFAULT_COST_CENTERS = {
     'CC202': {'name': 'Maintenance',                 'default_pc': 'PC99'},
     'CC301': {'name': 'Sales & Marketing',           'default_pc': 'PC99'},
     'CC302': {'name': 'Administration',              'default_pc': 'PC99'},
-}
-
-# Account ranges that REQUIRE a Profit Center tag
-PC_REQUIRED_RANGES = [
-    (4000, 4999),   # Revenue
-    (5000, 5999),   # All expenses (COGS + Opex + Non-Op)
-]
-
-# Account ranges that REQUIRE a Cost Center tag
-CC_REQUIRED_RANGES = [
-    (5000, 5999),   # All expenses must specify where the cost was incurred
-]
-
-# Account type classification for P&L grouping
-ACCOUNT_SEGMENTS = {
-    'revenue':         (4000, 4199),
-    'revenue_contra':  (4200, 4299),
-    'cogs':            (5000, 5099),
-    'opex':            (5100, 5899),
-    'nonop':           (5900, 5999),
 }
 
 

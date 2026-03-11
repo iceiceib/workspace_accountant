@@ -108,3 +108,22 @@ M3 (Bank Recon) → M4 (Adjustments) → M5 (Adjusted TB)
 - `data/Jan2026/chart_of_accounts.xlsx` - Added 6 WIP accounts
 - `data/Jan2026/general_journal.xlsx` - Added 12 WIP journal entries
 - `data/Jan2026/general_ledger.xlsx` - Added 18 WIP transaction rows
+
+## Code Fixes (2026-03-10)
+
+### Fixed: Account Code Ranges in pc_cc_mapper.py
+- **Issue:** PC_REQUIRED_RANGES and CC_REQUIRED_RANGES used 4-digit codes (4000-4999, 5000-5999)
+  but the COA uses 5-digit codes (40000-49999, 50000-69999)
+- **Fix:** Updated all ranges to 5-digit format
+- **Files affected:** `scripts/utils/pc_cc_mapper.py`
+
+### Fixed: Control Account Codes in summarize_ledgers.py
+- **Issue:** AR_GL_ACCOUNT=1100, AP_GL_ACCOUNT=2010, CASH_GL_ACCOUNTS=[1020,1021,1022]
+  but the COA uses 5-digit codes (11000, 20000, 10100)
+- **Fix:** Updated to correct 5-digit codes
+- **Impact:** Control account reconciliation now correctly finds GL balances
+- **Files affected:** `scripts/summarize_ledgers.py`
+
+### Lesson: Always Use Centralized Account Code Constants
+- Account codes should be defined in one place to prevent inconsistencies
+- Recommend creating `scripts/utils/constants.py` for all account codes
