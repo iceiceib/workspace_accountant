@@ -6,19 +6,19 @@ This script processes inventory movements from purchases and production usage,
 calculates Weighted Average Cost (WAC), and generates inventory reports.
 
 Usage:
-    python scripts/process_inventory.py DATA_DIR PERIOD_START PERIOD_END
+    python scripts/process_inventory.py LEDGERS_DIR OUTPUT_DIR PERIOD_START PERIOD_END
 
 Example:
-    python scripts/process_inventory.py data/Jan2026 2026-01-01 2026-01-31
+    python scripts/process_inventory.py data/input/ledgers data/output/Jan2026 2026-01-01 2026-01-31
 
 Input files:
-    - purchases_journal.xlsx (or raw_materials_ledger.xlsx with purchases)
-    - production_usage.xlsx (manual input or calculated)
+    - raw_materials_ledger.xlsx (in ledgers_dir)
+    - packaging_ledger.xlsx (in ledgers_dir)
 
 Output files:
-    - raw_materials_ledger.xlsx (updated)
-    - packaging_ledger.xlsx (updated)
-    - inventory_summary_[PERIOD].xlsx
+    - raw_materials_ledger.xlsx (updated, in ledgers_dir)
+    - packaging_ledger.xlsx (updated, in ledgers_dir)
+    - inventory_summary_[PERIOD].xlsx (in output_dir)
 """
 
 import sys

@@ -1,13 +1,13 @@
 """
 Module 2: Summarize Ledgers
-Reads all 6 ledger files for a period and produces a consolidated summary
+Reads all ledger files for a period and produces a consolidated summary
 with control account reconciliation and movement analysis.
 
 Usage:
-    python summarize_ledgers.py <input_dir> <period_start> <period_end> <output_file> [coa_file]
+    python summarize_ledgers.py <ledgers_dir> <period_start> <period_end> <output_file> <master_dir>
 
 Example:
-    python summarize_ledgers.py data/Jan2026 2026-01-01 2026-01-31 data/Jan2026/ledger_summary_Jan2026.xlsx data/Jan2026/chart_of_accounts.xlsx
+    python summarize_ledgers.py data/input/ledgers 2026-01-01 2026-01-31 data/output/Jan2026/ledger_summary_Jan2026.xlsx data/input/master
 """
 import sys
 import os
@@ -731,13 +731,19 @@ def write_exceptions_sheet(wb, exceptions):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main(input_dir, period_start, period_end, output_file, coa_file=None):
-    input_dir = Path(input_dir)
+def main(ledgers_dir, period_start, period_end, output_file, master_dir=None):
+    ledgers_dir = Path(ledgers_dir)
+
+    # Load COA from master_dir
+    coa_file = None
+    if master_dir:
+        coa_path = Path(master_dir) / 'chart_of_accounts.xlsx'
+        coa_file = str(coa_path) if coa_path.exists() else None
     coa = COAMapper(coa_file) if coa_file else COAMapper()
     exceptions = []
 
     # ─ 1. General Ledger ────────────────────────────────────────────────────
-    gl_file = find_ledger_file(input_dir, LEDGER_FILES['general_ledger'])
+    gl_file = find_ledger_file(ledgers_dir, LEDGER_FILES['general_ledger'])
     if not gl_file:
         print("ERROR: general_ledger.xlsx not found in input directory.")
         sys.exit(1)
@@ -750,7 +756,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 2. AR Ledger ─────────────────────────────────────────────────────────
     ar_entities = {}
-    ar_file = find_ledger_file(input_dir, LEDGER_FILES['ar_ledger'])
+    ar_file = find_ledger_file(ledgers_dir, LEDGER_FILES['ar_ledger'])
     if ar_file:
         ar_entities, err = process_subsidiary_ledger(
             ar_file, period_start, period_end,
@@ -763,7 +769,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 3. AP Ledger ─────────────────────────────────────────────────────────
     ap_entities = {}
-    ap_file = find_ledger_file(input_dir, LEDGER_FILES['ap_ledger'])
+    ap_file = find_ledger_file(ledgers_dir, LEDGER_FILES['ap_ledger'])
     if ap_file:
         ap_entities, err = process_subsidiary_ledger(
             ap_file, period_start, period_end,
@@ -776,7 +782,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 4. Cash Ledger ───────────────────────────────────────────────────────
     cash_banks = {}
-    cash_file = find_ledger_file(input_dir, LEDGER_FILES['cash_ledger'])
+    cash_file = find_ledger_file(ledgers_dir, LEDGER_FILES['cash_ledger'])
     if cash_file:
         cash_banks, err = process_cash_ledger(cash_file, period_start, period_end)
         if err:
@@ -787,7 +793,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 5. Fixed Assets ──────────────────────────────────────────────────────
     assets = []
-    fa_file = find_ledger_file(input_dir, LEDGER_FILES['fixed_assets'])
+    fa_file = find_ledger_file(ledgers_dir, LEDGER_FILES['fixed_assets'])
     if fa_file:
         assets, err = process_fixed_assets(fa_file)
         if err:
@@ -799,7 +805,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
     # ─ 6. Raw Materials Ledger ─────────────────────────────────────────────
     rm_items = {}
     rm_total = 0.0
-    rm_file = find_ledger_file(input_dir, LEDGER_FILES['raw_materials_ledger'])
+    rm_file = find_ledger_file(ledgers_dir, LEDGER_FILES['raw_materials_ledger'])
     if rm_file:
         rm_items, rm_total, err = process_inventory_ledger(rm_file, period_start, period_end)
         if err:
@@ -811,7 +817,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
     # ─ 7. Packaging Ledger ──────────────────────────────────────────────────
     pkg_items = {}
     pkg_total = 0.0
-    pkg_file = find_ledger_file(input_dir, LEDGER_FILES['packaging_ledger'])
+    pkg_file = find_ledger_file(ledgers_dir, LEDGER_FILES['packaging_ledger'])
     if pkg_file:
         pkg_items, pkg_total, err = process_inventory_ledger(pkg_file, period_start, period_end)
         if err:
@@ -890,7 +896,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print("Usage: python summarize_ledgers.py <input_dir> <period_start> <period_end> <output_file> [coa_file]")
+        print("Usage: python summarize_ledgers.py <ledgers_dir> <period_start> <period_end> <output_file> [master_dir]")
         sys.exit(1)
-    coa = sys.argv[5] if len(sys.argv) > 5 else None
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], coa)
+    master_dir = sys.argv[5] if len(sys.argv) > 5 else None
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], master_dir)

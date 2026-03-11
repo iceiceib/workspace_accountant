@@ -11,10 +11,10 @@ Performs comprehensive integrity checks across all module outputs to ensure:
 Output: audit_validation_[PERIOD].xlsx with all checks documented.
 
 Usage:
-    python validate_accounting.py <data_dir> <period_start> <period_end> <output_file>
+    python validate_accounting.py <input_dir> <output_dir> <period_start> <period_end> <output_file>
 
 Example:
-    python validate_accounting.py data/Jan2026 2026-01-01 2026-01-31 data/Jan2026/audit_validation_Jan2026.xlsx
+    python validate_accounting.py data/input data/output/Jan2026 2026-01-01 2026-01-31 data/output/Jan2026/audit_validation_Jan2026.xlsx
 """
 
 import sys
@@ -99,20 +99,23 @@ def to_num(series):
 # 1. Load All Module Outputs
 # ---------------------------------------------------------------------------
 
-def load_all_outputs(data_dir):
+def load_all_outputs(input_dir, output_dir):
     """
-    Load all module output files from the data directory.
+    Load all module output files from the output directory.
+    Also load ledger files from input directory for control account checks.
 
     Returns: dict with keys:
         'books_of_prime_entry', 'ledger_summary', 'bank_reconciliation',
-        'adjusting_entries', 'trial_balance', 'financial_statements'
+        'adjusting_entries', 'trial_balance', 'financial_statements',
+        'general_ledger', 'ar_ledger', 'ap_ledger', 'cash_ledger'
     """
-    data_dir = Path(data_dir)
+    input_dir = Path(input_dir)
+    output_dir = Path(output_dir)
     outputs = {}
     errors = []
 
-    # Module 1: Books of Prime Entry
-    bope_files = list(data_dir.glob('books_of_prime_entry*.xlsx'))
+    # Module 1: Books of Prime Entry (from output)
+    bope_files = list(output_dir.glob('books_of_prime_entry*.xlsx'))
     if bope_files:
         result = read_all_sheets(bope_files[0])
         if result['error']:
@@ -122,8 +125,8 @@ def load_all_outputs(data_dir):
     else:
         errors.append("Module 1: books_of_prime_entry*.xlsx not found")
 
-    # Module 2: Ledger Summary
-    ledger_files = list(data_dir.glob('ledger_summary*.xlsx'))
+    # Module 2: Ledger Summary (from output)
+    ledger_files = list(output_dir.glob('ledger_summary*.xlsx'))
     if ledger_files:
         result = read_all_sheets(ledger_files[0])
         if result['error']:
@@ -133,8 +136,8 @@ def load_all_outputs(data_dir):
     else:
         errors.append("Module 2: ledger_summary*.xlsx not found")
 
-    # Module 3: Bank Reconciliation
-    bank_files = list(data_dir.glob('bank_reconciliation*.xlsx'))
+    # Module 3: Bank Reconciliation (from output)
+    bank_files = list(output_dir.glob('bank_reconciliation*.xlsx'))
     if bank_files:
         result = read_all_sheets(bank_files[0])
         if result['error']:
@@ -144,8 +147,8 @@ def load_all_outputs(data_dir):
     else:
         errors.append("Module 3: bank_reconciliation*.xlsx not found")
 
-    # Module 4: Adjusting Entries
-    adj_files = list(data_dir.glob('adjusting_entries*.xlsx'))
+    # Module 4: Adjusting Entries (from output)
+    adj_files = list(output_dir.glob('adjusting_entries*.xlsx'))
     if adj_files:
         result = read_all_sheets(adj_files[0])
         if result['error']:
@@ -155,8 +158,8 @@ def load_all_outputs(data_dir):
     else:
         errors.append("Module 4: adjusting_entries*.xlsx not found")
 
-    # Module 5: Trial Balance
-    tb_files = list(data_dir.glob('trial_balance*.xlsx'))
+    # Module 5: Trial Balance (from output)
+    tb_files = list(output_dir.glob('trial_balance*.xlsx'))
     if tb_files:
         result = read_all_sheets(tb_files[0])
         if result['error']:
@@ -166,8 +169,8 @@ def load_all_outputs(data_dir):
     else:
         errors.append("Module 5: trial_balance*.xlsx not found")
 
-    # Module 6: Financial Statements
-    fin_files = list(data_dir.glob('financial_statements*.xlsx'))
+    # Module 6: Financial Statements (from output)
+    fin_files = list(output_dir.glob('financial_statements*.xlsx'))
     if fin_files:
         result = read_all_sheets(fin_files[0])
         if result['error']:
@@ -176,6 +179,33 @@ def load_all_outputs(data_dir):
             outputs['financial_statements'] = result['data']
     else:
         errors.append("Module 6: financial_statements*.xlsx not found")
+
+    # Input ledgers (for control account reconciliation)
+    ledgers_dir = input_dir / 'ledgers'
+    if ledgers_dir.exists():
+        gl_files = list(ledgers_dir.glob('general_ledger*.xlsx'))
+        if gl_files:
+            result = read_all_sheets(gl_files[0])
+            if not result['error']:
+                outputs['general_ledger'] = result['data']
+
+        ar_files = list(ledgers_dir.glob('accounts_receivable*.xlsx'))
+        if ar_files:
+            result = read_all_sheets(ar_files[0])
+            if not result['error']:
+                outputs['ar_ledger'] = result['data']
+
+        ap_files = list(ledgers_dir.glob('accounts_payable*.xlsx'))
+        if ap_files:
+            result = read_all_sheets(ap_files[0])
+            if not result['error']:
+                outputs['ap_ledger'] = result['data']
+
+        cash_files = list(ledgers_dir.glob('cash_ledger*.xlsx'))
+        if cash_files:
+            result = read_all_sheets(cash_files[0])
+            if not result['error']:
+                outputs['cash_ledger'] = result['data']
 
     return outputs, errors
 
@@ -1079,30 +1109,34 @@ def write_exceptions_sheet(wb, all_results):
 # ---------------------------------------------------------------------------
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end = sys.argv[3]
-    output_file = sys.argv[4]
+    input_dir    = sys.argv[1]
+    output_dir   = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end   = sys.argv[4]
+    output_file  = sys.argv[5]
 
     print("=" * 60)
     print("  MODULE 7 -- FULL-CYCLE ACCOUNTING VALIDATION")
     print(f"  Period : {period_start} to {period_end}")
-    print(f"  Data   : {data_dir}")
-    print(f"  Output : {output_file}")
+    print(f"  Input  : {input_dir}")
+    print(f"  Output : {output_dir}")
+    print(f"  Result : {output_file}")
     print("=" * 60)
     print()
 
     # Load COA for classification
-    coa_path = Path(data_dir) / 'chart_of_accounts.xlsx'
+    coa_path = Path(input_dir) / 'master' / 'chart_of_accounts.xlsx'
+    if not coa_path.exists():
+        coa_path = Path('data/input/master/chart_of_accounts.xlsx')
     coa = COAMapper(str(coa_path)) if coa_path.exists() else COAMapper()
 
     # Load all module outputs
     print("Loading module outputs...")
-    outputs, load_errors = load_all_outputs(data_dir)
+    outputs, load_errors = load_all_outputs(input_dir, output_dir)
 
     if load_errors:
         print("  Load warnings:")

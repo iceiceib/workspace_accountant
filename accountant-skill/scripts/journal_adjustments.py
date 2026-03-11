@@ -15,13 +15,14 @@ Informational reference sheets (already posted via journals, shown for completen
   5. Inventory         — reads inventory sub-ledgers for materials used
 
 Usage:
-    python journal_adjustments.py <data_dir> <period_start> <period_end> <output_file>
+    python journal_adjustments.py <ledgers_dir> <output_dir> <period_start> <period_end> <output_file>
 
     python journal_adjustments.py \\
-        data/Jan2026 \\
+        data/input/ledgers \\
+        data/output/Jan2026 \\
         2026-01-01 \\
         2026-01-31 \\
-        data/Jan2026/adjusting_entries_Jan2026.xlsx
+        data/output/Jan2026/adjusting_entries_Jan2026.xlsx
 
 Output sheets:
     Dashboard             — summary by type, totals, double-entry validation
@@ -1058,29 +1059,33 @@ def write_exceptions_sheet(wb, exceptions):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir   = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end   = sys.argv[3]
-    output_file  = sys.argv[4]
+    ledgers_dir  = sys.argv[1]
+    output_dir   = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end   = sys.argv[4]
+    output_file  = sys.argv[5]
 
     print(f"\n{'='*60}")
     print(f"  MODULE 4 -- JOURNAL ADJUSTMENTS")
     print(f"  Period : {period_start}  to  {period_end}")
-    print(f"  Data   : {data_dir}")
+    print(f"  Ledgers: {ledgers_dir}")
     print(f"  Output : {output_file}")
     print(f"{'='*60}\n")
 
-    coa_path = Path(data_dir) / 'chart_of_accounts.xlsx'
+    coa_path = Path(ledgers_dir) / 'chart_of_accounts.xlsx'
+    # Try master dir if not in ledgers_dir
+    if not coa_path.exists():
+        coa_path = Path('data/input/master/chart_of_accounts.xlsx')
     coa = COAMapper(str(coa_path)) if coa_path.exists() else COAMapper()
     exceptions = []
 
     # ── 1. Depreciation ──────────────────────────────────────────────────────
     print("Computing depreciation...")
-    asset_rows, depr_entries, err = compute_depreciation(data_dir)
+    asset_rows, depr_entries, err = compute_depreciation(ledgers_dir)
     if err:
         print(f"  ERROR: {err}")
         exceptions.append(err)
@@ -1096,7 +1101,7 @@ def main():
 
     # ── 2. Bank recon entries ────────────────────────────────────────────────
     print("\nLoading bank reconciliation entries...")
-    bank_entries, warn = load_bank_recon_entries(data_dir, period_end)
+    bank_entries, warn = load_bank_recon_entries(output_dir, period_end)
     if warn:
         print(f"  WARNING: {warn}")
         exceptions.append(warn)
@@ -1111,14 +1116,14 @@ def main():
     # ── 3. GL reference data ─────────────────────────────────────────────────
     print("\nLoading GL reference data...")
     accrual_rows, prepaid_rows, gl_balances = load_gl_reference(
-        data_dir, period_start, period_end, coa)
+        ledgers_dir, period_start, period_end, coa)
     print(f"  Accrual movements  : {len(accrual_rows)}")
     print(f"  Prepaid movements  : {len(prepaid_rows)}")
     print(f"  GL accounts loaded : {len(gl_balances)}")
 
     # ── 3b. Inventory sub-ledger data ───────────────────────────────────────
     print("\nLoading inventory sub-ledger data...")
-    inventory_rows, total_rm_issued, total_pkg_issued = load_inventory_data(data_dir)
+    inventory_rows, total_rm_issued, total_pkg_issued = load_inventory_data(ledgers_dir)
     print(f"  Inventory items    : {len(inventory_rows)}")
     print(f"  RM issued to prod  : {total_rm_issued:,.2f}")
     print(f"  Pkg issued to prod : {total_pkg_issued:,.2f}")

@@ -6,15 +6,15 @@ This script generates standardized inventory sub-ledger files from existing
 tracker data or creates blank templates for new periods.
 
 Usage:
-    python scripts/create_inventory_ledgers.py DATA_DIR PERIOD_START PERIOD_END OUTPUT_DIR
+    python scripts/create_inventory_ledgers.py INPUT_DIR OUTPUT_DIR PERIOD_START PERIOD_END
 
 Example:
-    python scripts/create_inventory_ledgers.py data/Jan2026 2026-01-01 2026-01-31 data/Jan2026
+    python scripts/create_inventory_ledgers.py data/input data/input/ledgers 2026-01-01 2026-01-31
 
 Output:
-    - raw_materials_ledger.xlsx
-    - packaging_ledger.xlsx
-    - inventory_items.xlsx (master list)
+    - raw_materials_ledger.xlsx (in output_dir)
+    - packaging_ledger.xlsx (in output_dir)
+    - inventory_items.xlsx (in input_dir/inventory)
 """
 
 import sys
