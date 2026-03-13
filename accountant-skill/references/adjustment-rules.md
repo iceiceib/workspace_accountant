@@ -12,10 +12,10 @@ Expenses that have been incurred during the period but payment hasn't been made 
 
 | Example | Debit | Credit |
 |---------|-------|--------|
-| Wages earned by employees, not yet paid | 5100 Salaries & Wages | 2030 Accrued Wages |
-| Utilities consumed, bill not received | 5210 Utilities Expense | 2020 Accrued Expenses |
-| Interest on loan, not yet due | 5910 Interest Expense | 2020 Accrued Expenses |
-| Rent for current period, not yet paid | 5200 Rent Expense | 2020 Accrued Expenses |
+| Wages earned by employees, not yet paid | 61000 Office Salaries | 22200 Wages Payable |
+| Utilities consumed, bill not received | 63000 Utilities Expense | 22000 Utility Bills |
+| Interest on loan, not yet due | 68000 Other Expenses | 20000 Accounts Payable |
+| Rent for current period, not yet paid | 68000 Other Expenses | 20000 Accounts Payable |
 
 **Calculation**: Determine the amount of expense attributable to the current period based on time, usage, or contractual terms.
 
@@ -25,7 +25,7 @@ Revenue that has been earned during the period but cash hasn't been received yet
 
 | Example | Debit | Credit |
 |---------|-------|--------|
-| Services delivered, not yet invoiced | 1100 Accounts Receivable | 4040 Sales Revenue |
+| Services delivered, not yet invoiced | 11000 Accounts Receivable | 40000 Sales Revenue |
 | Interest earned on bank deposit | 10100 Cash at Bank | 70000 Interest Income |
 
 ### 3. Prepaid Expenses (Expenses paid in advance, now used up)
@@ -34,9 +34,9 @@ Payments made in advance for future benefits. At period end, the used portion be
 
 | Example | Debit | Credit |
 |---------|-------|--------|
-| Insurance used this month | 5700 Insurance Expense | 1320 Prepaid Insurance |
-| Rent paid in advance, now used | 5200 Rent Expense | 1310 Prepaid Rent |
-| Supplies consumed | 5410 Office Supplies | 1300 Prepaid Expenses |
+| Insurance used this month | 68000 Other Expenses | 13000 Advanced Payments |
+| Rent paid in advance, now used | 68000 Other Expenses | 13000 Advanced Payments |
+| Supplies consumed | 65000 Factory & Office Supplies | 13000 Advanced Payments |
 
 **Calculation**: (Total Prepaid / Total Months) × Months Used in Period
 
@@ -46,7 +46,7 @@ Cash received before the service/goods have been delivered. At period end, the e
 
 | Example | Debit | Credit |
 |---------|-------|--------|
-| Deposit received, now goods delivered | 2040 Unearned Revenue | 4040 Sales Revenue |
+| Deposit received, now goods delivered | 13000 Advanced Payments | 40000 Sales Revenue |
 
 ### 5. Depreciation
 
@@ -66,11 +66,11 @@ Where: Depreciation Rate = 1 - (Salvage Value / Cost)^(1/Useful Life)
 
 | Entry | Debit | Credit |
 |-------|-------|--------|
-| Monthly depreciation — Buildings | 66000 Depreciation Expense | 1611 Accum. Depr. — Buildings |
-| Monthly depreciation — Plant & Machinery | 66000 Depreciation Expense | 1621 Accum. Depr. — P&M |
-| Monthly depreciation — Furniture | 66000 Depreciation Expense | 1631 Accum. Depr. — F&F |
-| Monthly depreciation — Vehicles | 66000 Depreciation Expense | 1641 Accum. Depr. — Vehicles |
-| Monthly depreciation — Equipment | 66000 Depreciation Expense | 1651 Accum. Depr. — Equipment |
+| Monthly depreciation — Buildings | 66000 Depreciation Expense | 15110 Accum. Depr. — Buildings |
+| Monthly depreciation — Machinery | 66000 Depreciation Expense | 15210 Accum. Depr. — Machinery |
+| Monthly depreciation — Office Equipment | 66000 Depreciation Expense | 15310 Accum. Depr. — Office Equipment |
+| Monthly depreciation — Electrical Systems | 66000 Depreciation Expense | 15410 Accum. Depr. — Electrical |
+| Monthly depreciation — Motor Vehicles | 66000 Depreciation Expense | 15510 Accum. Depr. — Motor Vehicles |
 
 **Source data**: Read from `fixed_asset_register.xlsx` to calculate depreciation per asset, then aggregate by category.
 
@@ -84,9 +84,9 @@ An estimate of accounts receivable that may not be collected.
 
 | Entry | Debit | Credit |
 |-------|-------|--------|
-| Increase provision for bad debts | 5800 Bad Debt Expense | 1110 Allowance for Doubtful Debts |
-| Decrease provision (if over-provided) | 1110 Allowance for Doubtful Debts | 5800 Bad Debt Expense |
-| Write off specific bad debt | 1110 Allowance for Doubtful Debts | 1100 Accounts Receivable |
+| Increase provision for bad debts | 67000 Inventory Write-off | 12300 Inventory Adjustments |
+| Decrease provision (if over-provided) | 12300 Inventory Adjustments | 67000 Inventory Write-off |
+| Write off specific bad debt | 12300 Inventory Adjustments | 11000 Accounts Receivable |
 
 ### 7. Inventory Adjustments
 
@@ -94,9 +94,9 @@ Adjustments when physical stock count differs from book records.
 
 | Scenario | Debit | Credit |
 |----------|-------|--------|
-| Stock shortage (book > actual) | 5010 Raw Materials Used / 5900 Misc Expense | 1200 Inventory — Raw Materials |
-| Stock surplus (actual > book) | 1200 Inventory — Raw Materials | 5010 Raw Materials Used |
-| COGS adjustment (periodic system) | 5010 Raw Materials Used | 1200 Inventory — Raw Materials |
+| Stock shortage (book > actual) | 50010 Purchases Raw Materials / 68000 Other Expenses | 12000 Inventory — Raw Materials |
+| Stock surplus (actual > book) | 12000 Inventory — Raw Materials | 50010 Purchases Raw Materials |
+| COGS adjustment (periodic system) | 50010 Purchases Raw Materials | 12000 Inventory — Raw Materials |
 
 ### 8. Error Corrections
 
@@ -168,9 +168,9 @@ Each adjusting entry should include:
 
 At year-end, revenue and expense accounts are closed to Retained Earnings:
 
-1. **Close revenue accounts**: Debit all revenue accounts, Credit 3040 Current Year Earnings
-2. **Close expense accounts**: Debit 3040 Current Year Earnings, Credit all expense accounts
-3. **Transfer net income**: Debit 3040 Current Year Earnings, Credit 3030 Retained Earnings
+1. **Close revenue accounts**: Debit all revenue accounts, Credit 32000 Retained Earnings
+2. **Close expense accounts**: Debit 32000 Retained Earnings, Credit all expense accounts
+3. Net Profit/Loss is automatically reflected in Retained Earnings
 
 After closing entries, only permanent accounts (Assets, Liabilities, Equity) have balances.
 

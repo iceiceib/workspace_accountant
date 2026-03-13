@@ -17,7 +17,7 @@ This document defines the expected column layout for every input .xlsx file. Whe
 
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
-| Account Code | Text/Number | Yes | Unique account identifier (e.g., 1010, 5300) |
+| Account Code | Text/Number | Yes | Unique account identifier (e.g., 10100, 53000) |
 | Account Name | Text | Yes | Account description |
 | Type | Text | Yes | Asset, Liability, Equity, Revenue, Expense |
 | Sub-Type | Text | No | Current Asset, Non-Current Asset, COGS, Operating Expense, etc. |

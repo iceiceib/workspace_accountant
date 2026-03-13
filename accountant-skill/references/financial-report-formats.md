@@ -15,21 +15,29 @@ For the period ended [DATE]
 
                                         Current Period    (Prior Period)
 REVENUE
-  Sales Revenue — Shop 1  (40000)            XXX              XXX
-  Sales Revenue — Shop 2  (4020)            XXX              XXX
-  Sales Revenue — Shop 3  (4030)            XXX              XXX
-  Sales Revenue — General (4040)            XXX              XXX
-  Less: Sales Returns (4200)               (XXX)            (XXX)
-  Less: Sales Discounts (4210)             (XXX)            (XXX)
+  Sales Revenue (40000)                      XXX              XXX
                                           ─────            ─────
   NET REVENUE                               XXX              XXX
 
 COST OF GOODS SOLD
-  Raw Materials Used (50000)                 XXX              XXX
-  Packaging Costs (5020)                    XXX              XXX
-  Direct Labour (5030)                      XXX              XXX
-  Manufacturing Overhead (5040)             XXX              XXX
-  Freight In (5050)                         XXX              XXX
+  Opening Inventory - Raw Materials (50000)  XXX              XXX
+  Purchases Raw Materials (50010)            XXX              XXX
+  Closing Inventory - Raw Materials (50020) (XXX)            (XXX)
+  Opening Inventory - Packaging (50100)      XXX              XXX
+  Purchases Packaging (50110)                XXX              XXX
+  Closing Inventory - Packaging (50120)     (XXX)            (XXX)
+  Opening Inventory - Finished Goods (50200) XXX              XXX
+  Closing Inventory - Finished Goods (50220)(XXX)            (XXX)
+  Opening WIP (50300)                        XXX              XXX
+  Direct Materials Used (50320)              XXX              XXX
+  Direct Labor to WIP (50330)                XXX              XXX
+  Overhead Applied (50340)                   XXX              XXX
+  WIP Transferred to FG (50350)             (XXX)            (XXX)
+  Closing WIP (50310)                       (XXX)            (XXX)
+  Direct Labor Wages (53000)                 XXX              XXX
+  Machine Maintenance (53100)                XXX              XXX
+  Production Utilities (53200)               XXX              XXX
+  Depreciation - COGS (53300)                XXX              XXX
                                           ─────            ─────
   TOTAL COGS                              (XXX)            (XXX)
                                           ─────            ─────
@@ -37,18 +45,16 @@ GROSS PROFIT                                XXX              XXX
   Gross Profit Margin                      XX.X%            XX.X%
 
 OPERATING EXPENSES
-  Salaries & Wages (61000)                   XXX              XXX
-  Employee Benefits (5110)                  XXX              XXX
-  Rent Expense (5200)                       XXX              XXX
-  Utilities Expense (5210)                  XXX              XXX
-  Depreciation Expense (5300)               XXX              XXX
-  Repairs & Maintenance (5400)              XXX              XXX
-  Transportation (5500)                     XXX              XXX
-  Marketing & Advertising (5600)            XXX              XXX
-  Insurance Expense (5700)                  XXX              XXX
-  Bad Debt Expense (5800)                   XXX              XXX
-  Miscellaneous Expense (5900)              XXX              XXX
-  [Other operating expenses]                XXX              XXX
+  Marketing & Advertising (60000)            XXX              XXX
+  Office Salaries (61000)                    XXX              XXX
+  Meal Allowance (62000)                     XXX              XXX
+  Utilities - SG&A (63000)                   XXX              XXX
+  Transportation & Distribution (64000)      XXX              XXX
+  Factory & Office Supplies (65000)          XXX              XXX
+  Depreciation - SG&A (66000)                XXX              XXX
+  Inventory Write-off (67000)                XXX              XXX
+  Other Expenses (68000)                     XXX              XXX
+  Key Management Compensation (69000)        XXX              XXX
                                           ─────            ─────
   TOTAL OPERATING EXPENSES                (XXX)            (XXX)
                                           ─────            ─────
@@ -56,33 +62,28 @@ OPERATING PROFIT                            XXX              XXX
   Operating Profit Margin                  XX.X%            XX.X%
 
 OTHER INCOME / (EXPENSES)
-  Other Income (4100)                       XXX              XXX
-  Interest Income (4110)                    XXX              XXX
-  Interest Expense (5910)                  (XXX)            (XXX)
-  Bank Charges (5920)                      (XXX)            (XXX)
-  Other Non-Operating (5930-5940)          (XXX)            (XXX)
+  Interest Income (70000)                    XXX              XXX
                                           ─────            ─────
   NET OTHER INCOME/(EXPENSES)              ±XXX             ±XXX
                                           ─────            ─────
 PROFIT BEFORE TAX                           XXX              XXX
 
-  Tax Expense (5950)                      (XXX)            (XXX)
                                           ═════            ═════
 NET PROFIT / (LOSS)                         XXX              XXX
   Net Profit Margin                        XX.X%            XX.X%
 ```
 
 ### Account Mapping
-- Revenue accounts: 4000-4999 (credit balances = positive revenue)
-- COGS accounts: 50000-5050 (debit balances = shown as negative)
-- Operating expense accounts: 61000-5900
-- Non-operating: 4100-4120 (income), 5910-5950 (expenses)
+- Revenue accounts: 40000-49999 (credit balances = positive revenue)
+- COGS accounts: 50000-53999 (debit balances = shown as negative)
+- Operating expense accounts: 60000-69999
+- Non-operating: 70000-79999 (income), 60000-69999 (overlapping expenses)
 
 ### Formulas
-- Net Revenue = Sum(40000:4040) - Sum(4200:4210)
+- Net Revenue = Sales Revenue (40000)
 - Gross Profit = Net Revenue - Total COGS
 - Operating Profit = Gross Profit - Total Operating Expenses
-- Net Profit = Operating Profit + Net Other Income/Expenses - Tax
+- Net Profit = Operating Profit + Net Other Income/Expenses
 
 ---
 
@@ -97,32 +98,32 @@ As at [DATE]
 
                                         Current Period    (Prior Period)
 NON-CURRENT ASSETS
-  Land (1600)                               XXX              XXX
-  Buildings (161000)                          XXX              XXX
-    Less: Accum. Depreciation (1611)       (XXX)            (XXX)
-  Plant & Machinery (1620)                  XXX              XXX
-    Less: Accum. Depreciation (1621)       (XXX)            (XXX)
-  Furniture & Fixtures (1630)               XXX              XXX
-    Less: Accum. Depreciation (1631)       (XXX)            (XXX)
-  Vehicles (1640)                           XXX              XXX
-    Less: Accum. Depreciation (1641)       (XXX)            (XXX)
-  Office Equipment (1650)                   XXX              XXX
-    Less: Accum. Depreciation (1651)       (XXX)            (XXX)
-  Construction in Progress (1660)           XXX              XXX
+  Land (15000)                               XXX              XXX
+  Buildings & Structures (15100)               XXX              XXX
+    Less: Accum. Depreciation (15110)       (XXX)            (XXX)
+  Machinery & Equipment (15200)              XXX              XXX
+    Less: Accum. Depreciation (15210)       (XXX)            (XXX)
+  Office & Facility Equipment (15300)        XXX              XXX
+    Less: Accum. Depreciation (15310)       (XXX)            (XXX)
+  Electrical & Utility Systems (15400)       XXX              XXX
+    Less: Accum. Depreciation (15410)       (XXX)            (XXX)
+  Motor Vehicles (15600)                     XXX              XXX
+    Less: Accum. Depreciation (15510)       (XXX)            (XXX)
+  Construction in Progress (15500)           XXX              XXX
                                           ─────            ─────
   TOTAL NON-CURRENT ASSETS                  XXX              XXX
 
 CURRENT ASSETS
   Inventory — Raw Materials (12000)          XXX              XXX
-  Inventory — Packaging (1210)              XXX              XXX
-  Inventory — Finished Goods (1220)         XXX              XXX
+  Inventory — Packaging (12100)              XXX              XXX
+  Inventory — Finished Goods (12200)         XXX              XXX
+  Work-in-Progress (12400)                   XXX              XXX
   Accounts Receivable (11000)                XXX              XXX
-    Less: Allowance for Doubtful Debts(1110)(XXX)           (XXX)
-  Prepaid Expenses (1300-1320)              XXX              XXX
-  Advances to Employees (1400)              XXX              XXX
-  Cash on Hand (1010)                       XXX              XXX
-  Cash at Bank (1020-1022)                  XXX              XXX
-  Petty Cash (1030)                         XXX              XXX
+    Less: Inventory Adjustments (12300)     (XXX)            (XXX)
+  Advanced Payments (13000)                  XXX              XXX
+  Deferred Preliminary Expenses (14000)      XXX              XXX
+  Cash in Hand (10000)                       XXX              XXX
+  Cash at Bank (10100)                       XXX              XXX
                                           ─────            ─────
   TOTAL CURRENT ASSETS                      XXX              XXX
                                           ─────            ─────
@@ -130,26 +131,23 @@ TOTAL ASSETS                                XXX              XXX
                                           ═════            ═════
 
 EQUITY
-  Owner's Capital (31000)                    XXX              XXX
-  Less: Owner's Drawings (3020)            (XXX)            (XXX)
-  Retained Earnings (3030)                  XXX              XXX
-  Current Period Net Profit/(Loss) (3040)   XXX              XXX
+  Paid-up Capital (31000)                    XXX              XXX
+  Retained Earnings (32000)                  XXX              XXX
+  Current Period Net Profit/(Loss)           XXX              XXX
                                           ─────            ─────
   TOTAL EQUITY                              XXX              XXX
 
 NON-CURRENT LIABILITIES
-  Long-term Loans (2100)                    XXX              XXX
-  Mortgage Payable (2110)                   XXX              XXX
+  Bank Loan (25000)                         XXX              XXX
                                           ─────            ─────
   TOTAL NON-CURRENT LIABILITIES             XXX              XXX
 
 CURRENT LIABILITIES
   Accounts Payable (20000)                   XXX              XXX
-  Accrued Expenses (2020)                   XXX              XXX
-  Accrued Wages (2030)                      XXX              XXX
-  Unearned Revenue (2040)                   XXX              XXX
-  Tax Payable (2050)                        XXX              XXX
-  Short-term Loans (2060)                   XXX              XXX
+  Short-term Loans (21000)                   XXX              XXX
+  Utility Bills (22000)                      XXX              XXX
+  Provision for Management Compensation (22100) XXX           XXX
+  Wages Payable (22200)                      XXX              XXX
                                           ─────            ─────
   TOTAL CURRENT LIABILITIES                 XXX              XXX
                                           ─────            ─────
@@ -179,10 +177,7 @@ OPERATING ACTIVITIES
   Net Profit/(Loss)                         XXX
 
   Adjustments for non-cash items:
-    Depreciation (5300)                    +XXX
-    Bad Debt Expense (5800)                +XXX
-    Loss on Disposal of Assets (5930)      +XXX
-    Gain on Disposal of Assets (4120)      -XXX
+    Depreciation (66000)                   +XXX
 
   Changes in working capital:
     (Increase)/Decrease in AR              ±XXX
