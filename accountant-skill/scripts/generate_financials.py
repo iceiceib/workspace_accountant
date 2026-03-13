@@ -10,13 +10,14 @@ Reads the Adjusted Trial Balance (from Module 5 output) and produces:
   - Exceptions          (only if errors found)
 
 Usage:
-    python generate_financials.py <data_dir> <period_start> <period_end> <output_file>
+    python generate_financials.py <ledgers_dir> <output_dir> <period_start> <period_end> <output_file>
 
     python generate_financials.py \\
-        data/Jan2026 \\
+        data/input/ledgers \\
+        data/output/Jan2026 \\
         2026-01-01 \\
         2026-01-31 \\
-        data/Jan2026/financial_statements_Jan2026.xlsx
+        data/output/Jan2026/financial_statements_Jan2026.xlsx
 """
 
 import sys
@@ -1064,29 +1065,33 @@ def write_exceptions_sheet(wb, exceptions):
 # ---------------------------------------------------------------------------
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir     = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end   = sys.argv[3]
-    output_file  = sys.argv[4]
+    ledgers_dir  = sys.argv[1]
+    output_dir   = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end   = sys.argv[4]
+    output_file  = sys.argv[5]
 
     print(f"\n{'='*60}")
     print(f"  MODULE 6 -- GENERATE FINANCIAL STATEMENTS")
     print(f"  Period : {period_start}  to  {period_end}")
-    print(f"  Data   : {data_dir}")
+    print(f"  Ledgers: {ledgers_dir}")
     print(f"  Output : {output_file}")
     print(f"{'='*60}\n")
 
-    coa_path = Path(data_dir) / 'chart_of_accounts.xlsx'
+    coa_path = Path(ledgers_dir) / 'chart_of_accounts.xlsx'
+    # Try master dir if not in ledgers_dir
+    if not coa_path.exists():
+        coa_path = Path('data/input/master/chart_of_accounts.xlsx')
     coa      = COAMapper(str(coa_path)) if coa_path.exists() else COAMapper()
     exceptions = []
 
     # ── 1. Load Adjusted TB ──────────────────────────────────────────────────
     print("Loading Adjusted Trial Balance...")
-    accounts, err = load_adjusted_tb(data_dir)
+    accounts, err = load_adjusted_tb(output_dir)
     if err:
         print(f"  ERROR: {err}")
         exceptions.append(f"FATAL: {err}")
@@ -1096,7 +1101,7 @@ def main():
 
     # ── 2. Load GL Data (opening balances for CF) ────────────────────────────
     print("\nLoading GL opening balances for Cash Flow...")
-    gl_openings, warn = load_gl_data(data_dir, period_start, coa)
+    gl_openings, warn = load_gl_data(ledgers_dir, period_start, coa)
     if warn:
         print(f"  WARNING: {warn}")
         exceptions.append(warn)
@@ -1105,7 +1110,7 @@ def main():
 
     # ── 3. Load Adjusting Entries (for non-cash items) ───────────────────────
     print("\nLoading adjusting entries...")
-    adj_entries, warn = load_adj_entries(data_dir)
+    adj_entries, warn = load_adj_entries(output_dir)
     if warn:
         print(f"  WARNING: {warn}")
         exceptions.append(warn)

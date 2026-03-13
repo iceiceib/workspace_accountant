@@ -12,15 +12,17 @@ Auto-generated entries:
 Informational reference sheets (already posted via journals, shown for completeness):
   3. Accruals          — reads GL for movements in accrued expense accounts
   4. Prepayments       — reads GL for movements in prepaid asset accounts
+  5. Inventory         — reads inventory sub-ledgers for materials used
 
 Usage:
-    python journal_adjustments.py <data_dir> <period_start> <period_end> <output_file>
+    python journal_adjustments.py <ledgers_dir> <output_dir> <period_start> <period_end> <output_file>
 
     python journal_adjustments.py \\
-        data/Jan2026 \\
+        data/input/ledgers \\
+        data/output/Jan2026 \\
         2026-01-01 \\
         2026-01-31 \\
-        data/Jan2026/adjusting_entries_Jan2026.xlsx
+        data/output/Jan2026/adjusting_entries_Jan2026.xlsx
 
 Output sheets:
     Dashboard             — summary by type, totals, double-entry validation
@@ -78,6 +80,18 @@ ACCUM_DEPR_MAP = {
 # 5-digit codes: Prepayments 13000-14999, Accruals 22000-22999
 PREPAID_ACCOUNT_RANGE = (13000, 14999)
 ACCRUAL_ACCOUNT_CODES = {22000: 'Utility Bills', 22200: 'Wages Payable'}
+
+# Inventory account codes
+INVENTORY_ACCOUNTS = {
+    12000: 'Inventory - Raw Materials',
+    12100: 'Inventory - Packaging',
+    12200: 'Inventory - Finished Goods',
+    12400: 'Work-in-Progress'
+}
+
+# COGS account codes for inventory issued to production
+COGS_MATERIALS_CODE = '50320'  # Direct Materials Used
+COGS_PACKAGING_CODE = '50110'  # Purchases Packaging
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -396,6 +410,174 @@ def load_gl_reference(data_dir, period_start, period_end, coa=None):
                 prepaid_rows.append(entry)
 
     return accrual_rows, prepaid_rows, gl_balances
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. INVENTORY SUB-LEDGER REFERENCE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def load_inventory_data(data_dir):
+    """
+    Read inventory sub-ledgers to summarize materials issued to production.
+
+    Returns:
+        inventory_rows: list of dicts with item-level details
+        total_rm_issued: total raw materials issued
+        total_pkg_issued: total packaging issued
+    """
+    inventory_rows = []
+    total_rm_issued = 0.0
+    total_pkg_issued = 0.0
+
+    # Load raw materials ledger
+    rm_path = Path(data_dir) / 'raw_materials_ledger.xlsx'
+    if rm_path.exists():
+        try:
+            xl = pd.ExcelFile(rm_path)
+            for sheet_name in xl.sheet_names:
+                if sheet_name.lower() in ['dashboard', 'summary']:
+                    continue
+                try:
+                    item_code = int(float(sheet_name))
+                except (ValueError, TypeError):
+                    continue
+
+                df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+
+                # Find header row
+                header_row = None
+                for i, row in df.iterrows():
+                    if 'Date' in str(row[0]) or any('date' in str(v).lower() for v in row if pd.notna(v)):
+                        header_row = i
+                        break
+
+                if header_row is None:
+                    continue
+
+                # Get column mapping
+                headers = df.iloc[header_row].tolist()
+                col_map = {}
+                for i, h in enumerate(headers):
+                    if pd.isna(h):
+                        continue
+                    h_lower = str(h).lower().strip()
+                    if 'issued qty' in h_lower or 'issued_qty' in h_lower:
+                        col_map['issued_qty'] = i
+                    elif 'issued value' in h_lower:
+                        col_map['issued_value'] = i
+                    elif 'balance qty' in h_lower:
+                        col_map['balance_qty'] = i
+                    elif 'balance value' in h_lower:
+                        col_map['balance_value'] = i
+
+                # Sum issued values from data rows
+                issued_value = 0.0
+                closing_value = 0.0
+                for i in range(header_row + 1, len(df)):
+                    row = df.iloc[i]
+                    if col_map.get('issued_value') is not None:
+                        val = row[col_map['issued_value']]
+                        try:
+                            issued_value += float(val) if pd.notna(val) else 0
+                        except (ValueError, TypeError):
+                            pass
+                    if col_map.get('balance_value') is not None:
+                        val = row[col_map['balance_value']]
+                        try:
+                            closing_val = float(val) if pd.notna(val) else 0
+                            if closing_val > 0:
+                                closing_value = closing_val
+                        except (ValueError, TypeError):
+                            pass
+
+                if issued_value > 0 or closing_value > 0:
+                    inventory_rows.append({
+                        'item_code': item_code,
+                        'category': 'Raw Materials',
+                        'account_code': 12000,
+                        'issued_value': issued_value,
+                        'closing_value': closing_value
+                    })
+                    total_rm_issued += issued_value
+
+        except Exception as e:
+            print(f"  Warning: Could not read raw materials ledger: {e}")
+
+    # Load packaging ledger
+    pkg_path = Path(data_dir) / 'packaging_ledger.xlsx'
+    if pkg_path.exists():
+        try:
+            xl = pd.ExcelFile(pkg_path)
+            for sheet_name in xl.sheet_names:
+                if sheet_name.lower() in ['dashboard', 'summary']:
+                    continue
+                try:
+                    item_code = int(float(sheet_name))
+                except (ValueError, TypeError):
+                    continue
+
+                df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+
+                # Find header row
+                header_row = None
+                for i, row in df.iterrows():
+                    if 'Date' in str(row[0]) or any('date' in str(v).lower() for v in row if pd.notna(v)):
+                        header_row = i
+                        break
+
+                if header_row is None:
+                    continue
+
+                # Get column mapping
+                headers = df.iloc[header_row].tolist()
+                col_map = {}
+                for i, h in enumerate(headers):
+                    if pd.isna(h):
+                        continue
+                    h_lower = str(h).lower().strip()
+                    if 'issued qty' in h_lower or 'issued_qty' in h_lower:
+                        col_map['issued_qty'] = i
+                    elif 'issued value' in h_lower:
+                        col_map['issued_value'] = i
+                    elif 'balance qty' in h_lower:
+                        col_map['balance_qty'] = i
+                    elif 'balance value' in h_lower:
+                        col_map['balance_value'] = i
+
+                # Sum issued values from data rows
+                issued_value = 0.0
+                closing_value = 0.0
+                for i in range(header_row + 1, len(df)):
+                    row = df.iloc[i]
+                    if col_map.get('issued_value') is not None:
+                        val = row[col_map['issued_value']]
+                        try:
+                            issued_value += float(val) if pd.notna(val) else 0
+                        except (ValueError, TypeError):
+                            pass
+                    if col_map.get('balance_value') is not None:
+                        val = row[col_map['balance_value']]
+                        try:
+                            closing_val = float(val) if pd.notna(val) else 0
+                            if closing_val > 0:
+                                closing_value = closing_val
+                        except (ValueError, TypeError):
+                            pass
+
+                if issued_value > 0 or closing_value > 0:
+                    inventory_rows.append({
+                        'item_code': item_code,
+                        'category': 'Packaging',
+                        'account_code': 12100,
+                        'issued_value': issued_value,
+                        'closing_value': closing_value
+                    })
+                    total_pkg_issued += issued_value
+
+        except Exception as e:
+            print(f"  Warning: Could not read packaging ledger: {e}")
+
+    return inventory_rows, total_rm_issued, total_pkg_issued
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -720,6 +902,59 @@ def write_prepayments_sheet(wb, prepaid_rows, period_start, period_end):
     freeze_panes(ws)
 
 
+def write_inventory_sheet(wb, inventory_rows, total_rm_issued, total_pkg_issued,
+                          period_start, period_end):
+    ws = add_sheet(wb, 'Inventory', tab_color='4472C4')
+    row = write_title(ws, 'Inventory — Materials Issued to Production',
+                      'Summary of inventory sub-ledger movements',
+                      f'{period_start}  to  {period_end}')
+
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
+    note = ws.cell(row=row, column=1,
+                   value='Materials issued to production are recorded via inventory sub-ledgers. '
+                         'Cost of materials used flows to COGS accounts.')
+    note.font = Font(italic=True, size=10, name='Arial', color='595959')
+    row += 2
+
+    if not inventory_rows:
+        ws.cell(row=row, column=1,
+                value='No inventory sub-ledger data found for this period.'
+                ).font = NORMAL_FONT
+        return
+
+    headers = ['Item Code', 'Category', 'Account Code', 'Issued Value', 'Closing Value']
+    row = write_header_row(ws, headers, row)
+
+    total_issued = 0.0
+    total_closing = 0.0
+    for r in sorted(inventory_rows, key=lambda x: (x['category'], x['item_code'])):
+        row = write_data_row(ws, [
+            r['item_code'], r['category'], r['account_code'],
+            _n(r['issued_value']), _n(r['closing_value']),
+        ], row, number_cols=[4, 5])
+        total_issued += r['issued_value']
+        total_closing += r['closing_value']
+
+    row = write_total_row(ws, 'Total',
+                          [None, None, _n(total_issued), _n(total_closing)],
+                          row, double_line=True)
+
+    # Summary section
+    row += 2
+    row = write_section_header(ws, 'COST OF MATERIALS USED', row, col_span=4)
+    row = write_header_row(ws, ['Category', 'Account', 'Amount'], row)
+    row = write_data_row(ws, ['Raw Materials', '50320 Direct Materials Used',
+                              _n(total_rm_issued)], row, number_cols=[3])
+    row = write_data_row(ws, ['Packaging', '50110 Purchases Packaging',
+                              _n(total_pkg_issued)], row, number_cols=[3])
+    row = write_total_row(ws, 'Total Cost of Materials',
+                          [None, _n(total_rm_issued + total_pkg_issued)],
+                          row, double_line=True)
+
+    auto_fit_columns(ws)
+    freeze_panes(ws)
+
+
 def write_all_entries(wb, all_entries, period_end):
     ws = add_sheet(wb, 'All Entries', tab_color='4472C4')
     row = write_title(ws, 'All Adjusting Entries — Master Journal',
@@ -824,29 +1059,33 @@ def write_exceptions_sheet(wb, exceptions):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir   = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end   = sys.argv[3]
-    output_file  = sys.argv[4]
+    ledgers_dir  = sys.argv[1]
+    output_dir   = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end   = sys.argv[4]
+    output_file  = sys.argv[5]
 
     print(f"\n{'='*60}")
     print(f"  MODULE 4 -- JOURNAL ADJUSTMENTS")
     print(f"  Period : {period_start}  to  {period_end}")
-    print(f"  Data   : {data_dir}")
+    print(f"  Ledgers: {ledgers_dir}")
     print(f"  Output : {output_file}")
     print(f"{'='*60}\n")
 
-    coa_path = Path(data_dir) / 'chart_of_accounts.xlsx'
+    coa_path = Path(ledgers_dir) / 'chart_of_accounts.xlsx'
+    # Try master dir if not in ledgers_dir
+    if not coa_path.exists():
+        coa_path = Path('data/input/master/chart_of_accounts.xlsx')
     coa = COAMapper(str(coa_path)) if coa_path.exists() else COAMapper()
     exceptions = []
 
     # ── 1. Depreciation ──────────────────────────────────────────────────────
     print("Computing depreciation...")
-    asset_rows, depr_entries, err = compute_depreciation(data_dir)
+    asset_rows, depr_entries, err = compute_depreciation(ledgers_dir)
     if err:
         print(f"  ERROR: {err}")
         exceptions.append(err)
@@ -862,7 +1101,7 @@ def main():
 
     # ── 2. Bank recon entries ────────────────────────────────────────────────
     print("\nLoading bank reconciliation entries...")
-    bank_entries, warn = load_bank_recon_entries(data_dir, period_end)
+    bank_entries, warn = load_bank_recon_entries(output_dir, period_end)
     if warn:
         print(f"  WARNING: {warn}")
         exceptions.append(warn)
@@ -877,10 +1116,18 @@ def main():
     # ── 3. GL reference data ─────────────────────────────────────────────────
     print("\nLoading GL reference data...")
     accrual_rows, prepaid_rows, gl_balances = load_gl_reference(
-        data_dir, period_start, period_end, coa)
+        ledgers_dir, period_start, period_end, coa)
     print(f"  Accrual movements  : {len(accrual_rows)}")
     print(f"  Prepaid movements  : {len(prepaid_rows)}")
     print(f"  GL accounts loaded : {len(gl_balances)}")
+
+    # ── 3b. Inventory sub-ledger data ───────────────────────────────────────
+    print("\nLoading inventory sub-ledger data...")
+    inventory_rows, total_rm_issued, total_pkg_issued = load_inventory_data(ledgers_dir)
+    print(f"  Inventory items    : {len(inventory_rows)}")
+    print(f"  RM issued to prod  : {total_rm_issued:,.2f}")
+    print(f"  Pkg issued to prod : {total_pkg_issued:,.2f}")
+    print(f"  Total materials    : {total_rm_issued + total_pkg_issued:,.2f}")
 
     # ── 4. Combine + number entries ──────────────────────────────────────────
     all_entries = depr_entries + bank_entries
@@ -921,6 +1168,8 @@ def main():
     write_bank_recon_entries_sheet(wb, bank_entries, period_end)
     write_accruals_sheet(wb, accrual_rows, period_start, period_end)
     write_prepayments_sheet(wb, prepaid_rows, period_start, period_end)
+    write_inventory_sheet(wb, inventory_rows, total_rm_issued, total_pkg_issued,
+                          period_start, period_end)
     write_all_entries(wb, all_entries, period_end)
     write_account_impact(wb, impacts, period_end)
     if exceptions:
@@ -931,7 +1180,7 @@ def main():
     print(f"\n{'='*60}")
     print(f"  OUTPUT: {output_file}")
     print(f"  Sheets: Dashboard | Depreciation Schedule | Bank Recon Entries |")
-    print(f"          Accruals | Prepayments | All Entries | Account Impact"
+    print(f"          Accruals | Prepayments | Inventory | All Entries | Account Impact"
           + (" | Exceptions" if exceptions else ""))
     print(f"  New adjusting entries : {len(all_entries)}")
     print(f"  Grand total (Dr = Cr) : {total_dr:,.2f}")

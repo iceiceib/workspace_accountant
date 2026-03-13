@@ -1,13 +1,13 @@
 """
 Module 2: Summarize Ledgers
-Reads all 6 ledger files for a period and produces a consolidated summary
+Reads all ledger files for a period and produces a consolidated summary
 with control account reconciliation and movement analysis.
 
 Usage:
-    python summarize_ledgers.py <input_dir> <period_start> <period_end> <output_file> [coa_file]
+    python summarize_ledgers.py <ledgers_dir> <period_start> <period_end> <output_file> <master_dir>
 
 Example:
-    python summarize_ledgers.py data/Jan2026 2026-01-01 2026-01-31 data/Jan2026/ledger_summary_Jan2026.xlsx data/Jan2026/chart_of_accounts.xlsx
+    python summarize_ledgers.py data/input/ledgers 2026-01-01 2026-01-31 data/output/Jan2026/ledger_summary_Jan2026.xlsx data/input/master
 """
 import sys
 import os
@@ -36,6 +36,8 @@ LEDGER_FILES = {
     'cash_ledger':    ['cash_ledger', 'cash ledger', 'bank_ledger'],
     'fixed_assets':   ['fixed_assets_ledger', 'fixed_asset_ledger', 'fixed assets'],
     'equity_ledger':  ['equity_ledger', 'equity ledger'],
+    'raw_materials_ledger': ['raw_materials_ledger', 'raw materials ledger', 'rm_ledger'],
+    'packaging_ledger': ['packaging_ledger', 'packaging ledger', 'pkg_ledger'],
 }
 
 
@@ -314,10 +316,120 @@ def process_fixed_assets(filepath):
     return result['data'].to_dict('records'), None
 
 
+def process_inventory_ledger(filepath, period_start, period_end):
+    """
+    Read an inventory sub-ledger file (raw materials or packaging).
+
+    Returns: dict[item_code -> summary], total_closing_value, error
+    """
+    result = read_all_sheets(filepath)
+    if result['error']:
+        return None, 0, result['error']
+
+    sheets = result['data']
+    items = {}
+    total_closing = 0.0
+
+    for sheet_name, raw_df in sheets.items():
+        # Skip Dashboard sheet
+        if sheet_name.lower() in ['dashboard', 'summary']:
+            continue
+
+        df = normalize_cols(raw_df)
+
+        # Try to parse sheet name as item code
+        try:
+            item_code = int(float(sheet_name))
+        except (ValueError, TypeError):
+            continue
+
+        # Find columns
+        date_col = find_col(df, ['date'])
+        ref_col = find_col(df, ['reference'])
+        desc_col = find_col(df, ['description'])
+        recv_qty_col = find_col(df, ['received qty', 'received_qty', 'recv qty'])
+        issue_qty_col = find_col(df, ['issued qty', 'issued_qty', 'issue qty'])
+        bal_qty_col = find_col(df, ['balance qty', 'balance_qty', 'bal qty'])
+        unit_cost_col = find_col(df, ['unit cost', 'unit_cost', 'wac'])
+        recv_val_col = find_col(df, ['received value', 'received_value', 'recv value'])
+        issue_val_col = find_col(df, ['issued value', 'issued_value', 'issue value'])
+        bal_val_col = find_col(df, ['balance value', 'balance_value', 'bal value'])
+
+        if bal_val_col is None:
+            continue
+
+        # Get opening balance (first row with data, or look for 'opening' row)
+        opening_qty = 0.0
+        opening_value = 0.0
+        closing_qty = 0.0
+        closing_value = 0.0
+        received_qty = 0.0
+        received_value = 0.0
+        issued_qty = 0.0
+        issued_value = 0.0
+
+        # Find the header row
+        header_row = None
+        for i, row in df.iterrows():
+            if date_col and pd.notna(row.get(date_col)) and str(row.get(date_col, '')).lower() == 'date':
+                header_row = i
+                break
+
+        if header_row is not None:
+            # Data starts after header
+            data_df = df.iloc[header_row + 1:]
+        else:
+            data_df = df
+
+        # Process data rows
+        for i, row in data_df.iterrows():
+            if bal_val_col and pd.notna(row.get(bal_val_col)):
+                bal_val = to_num(pd.Series([row[bal_val_col]])).iloc[0]
+                bal_qty = to_num(pd.Series([row.get(bal_qty_col, 0)])).iloc[0]
+
+                # First non-zero balance is opening
+                if opening_value == 0 and bal_val > 0:
+                    opening_value = bal_val
+                    opening_qty = bal_qty
+
+                # Track movements
+                if recv_val_col:
+                    recv_val = to_num(pd.Series([row.get(recv_val_col, 0)])).iloc[0]
+                    if recv_val > 0:
+                        received_value += recv_val
+                        if recv_qty_col:
+                            received_qty += to_num(pd.Series([row.get(recv_qty_col, 0)])).iloc[0]
+
+                if issue_val_col:
+                    iss_val = to_num(pd.Series([row.get(issue_val_col, 0)])).iloc[0]
+                    if iss_val > 0:
+                        issued_value += iss_val
+                        if issue_qty_col:
+                            issued_qty += to_num(pd.Series([row.get(issue_qty_col, 0)])).iloc[0]
+
+                # Last non-zero balance is closing
+                closing_value = bal_val
+                closing_qty = bal_qty
+
+        items[item_code] = {
+            'opening_qty': opening_qty,
+            'opening_value': opening_value,
+            'received_qty': received_qty,
+            'received_value': received_value,
+            'issued_qty': issued_qty,
+            'issued_value': issued_value,
+            'closing_qty': closing_qty,
+            'closing_value': closing_value,
+        }
+        total_closing += closing_value
+
+    return items, total_closing, None
+
+
 # ── Output sheets ─────────────────────────────────────────────────────────────
 
 def write_dashboard(wb, gl_accounts, ar_entities, ap_entities, cash_banks,
-                    assets, exceptions, period_start, period_end):
+                    assets, exceptions, period_start, period_end, rm_items=None, pkg_items=None):
     ws = add_sheet(wb, 'Dashboard', tab_color='00B050')
     row = write_title(ws, 'SHWE MANDALAY CAFE', 'Ledger Summary — Dashboard',
                       f"{period_start} to {period_end}")
@@ -331,6 +443,8 @@ def write_dashboard(wb, gl_accounts, ar_entities, ap_entities, cash_banks,
         ('AP Ledger',         len(ap_entities),  'OK' if ap_entities else 'NOT FOUND'),
         ('Cash Ledger',       len(cash_banks),   'OK' if cash_banks  else 'NOT FOUND'),
         ('Fixed Assets',      len(assets),       'OK' if assets      else 'NOT FOUND'),
+        ('Raw Materials Ledger', len(rm_items) if rm_items else 0, 'OK' if rm_items else 'NOT FOUND'),
+        ('Packaging Ledger',  len(pkg_items) if pkg_items else 0, 'OK' if pkg_items else 'NOT FOUND'),
     ]
     for label, count, status in statuses:
         row = write_data_row(ws, [label, count, status], row)
@@ -361,6 +475,31 @@ def write_dashboard(wb, gl_accounts, ar_entities, ap_entities, cash_banks,
         passed = abs(diff) < 0.01
         status = 'MATCH' if passed else 'MISMATCH'
         row = write_data_row(ws, [label, gl_bal, sub_total, diff, status], row)
+
+    # Inventory reconciliation
+    if rm_items or pkg_items:
+        row += 1
+        row = write_section_header(ws, 'INVENTORY RECONCILIATION', row, col_span=5)
+        row = write_header_row(ws, ['Account', 'GL Balance', 'Sub-Ledger Total', 'Difference', 'Result'], row)
+
+        gl_rm = gl_accounts.get(12000, {}).get('closing', 0)
+        gl_pkg = gl_accounts.get(12100, {}).get('closing', 0)
+
+        rm_sub = sum(i['closing_value'] for i in rm_items.values()) if rm_items else 0
+        pkg_sub = sum(i['closing_value'] for i in pkg_items.values()) if pkg_items else 0
+
+        inv_checks = [
+            ('Raw Materials (12000)', gl_rm, rm_sub, rm_items),
+            ('Packaging (12100)', gl_pkg, pkg_sub, pkg_items),
+        ]
+        for label, gl_bal, sub_total, items in inv_checks:
+            if not items:
+                row = write_data_row(ws, [label, gl_bal or 'N/A', sub_total, 'N/A', 'SKIP'], row)
+                continue
+            diff = (gl_bal or 0) - sub_total
+            passed = abs(diff) < 0.01
+            status = 'MATCH' if passed else 'MISMATCH'
+            row = write_data_row(ws, [label, gl_bal or 'N/A', sub_total, diff, status], row)
 
     auto_fit_columns(ws)
     freeze_panes(ws)
@@ -504,6 +643,81 @@ def write_fixed_assets_sheet(wb, assets):
     freeze_panes(ws)
 
 
+def write_inventory_sheet(wb, rm_items, pkg_items, gl_accounts):
+    """Write the Inventory Sub-Ledger Summary sheet."""
+    ws = add_sheet(wb, 'Inventory Summary', tab_color='70AD47')
+    row = write_title(ws, 'Inventory Sub-Ledger Summary')
+
+    # Raw Materials Section
+    row = write_section_header(ws, 'RAW MATERIALS', row, col_span=5)
+    headers = ['Item Code', 'Opening Value', 'Purchases', 'Issued', 'Closing Value']
+    row = write_header_row(ws, headers, row)
+
+    rm_total_opening = rm_total_purchases = rm_total_issued = rm_total_closing = 0.0
+    for code in sorted(rm_items.keys()):
+        item = rm_items[code]
+        row = write_data_row(ws, [
+            code, item['opening_value'], item['received_value'],
+            item['issued_value'], item['closing_value']
+        ], row)
+        rm_total_opening += item['opening_value']
+        rm_total_purchases += item['received_value']
+        rm_total_issued += item['issued_value']
+        rm_total_closing += item['closing_value']
+
+    row = write_total_row(ws, 'Total Raw Materials',
+                          [None, rm_total_opening, rm_total_purchases, rm_total_issued, rm_total_closing], row)
+
+    # Packaging Section
+    row += 1
+    row = write_section_header(ws, 'PACKAGING MATERIALS', row, col_span=5)
+    row = write_header_row(ws, headers, row)
+
+    pkg_total_opening = pkg_total_purchases = pkg_total_issued = pkg_total_closing = 0.0
+    for code in sorted(pkg_items.keys()):
+        item = pkg_items[code]
+        row = write_data_row(ws, [
+            code, item['opening_value'], item['received_value'],
+            item['issued_value'], item['closing_value']
+        ], row)
+        pkg_total_opening += item['opening_value']
+        pkg_total_purchases += item['received_value']
+        pkg_total_issued += item['issued_value']
+        pkg_total_closing += item['closing_value']
+
+    row = write_total_row(ws, 'Total Packaging',
+                          [None, pkg_total_opening, pkg_total_purchases, pkg_total_issued, pkg_total_closing], row)
+
+    # Reconciliation Section
+    row += 2
+    row = write_section_header(ws, 'GL RECONCILIATION', row, col_span=4)
+    row = write_header_row(ws, ['Account', 'GL Balance', 'Sub-Ledger Total', 'Difference'], row)
+
+    # Get GL balances for inventory accounts
+    gl_rm = gl_accounts.get(12000, {}).get('closing', 0)
+    gl_pkg = gl_accounts.get(12100, {}).get('closing', 0)
+
+    sub_rm = rm_total_closing
+    sub_pkg = pkg_total_closing
+
+    diff_rm = gl_rm - sub_rm
+    diff_pkg = gl_pkg - sub_pkg
+
+    row = write_data_row(ws, ['Raw Materials (12000)', gl_rm, sub_rm, diff_rm], row)
+    row = write_data_row(ws, ['Packaging (12100)', gl_pkg, sub_pkg, diff_pkg], row)
+
+    # Highlight differences
+    for r in range(row - 2, row):
+        diff_cell = ws.cell(row=r, column=4)
+        if isinstance(diff_cell.value, (int, float)) and abs(diff_cell.value) > 0.01:
+            diff_cell.fill = WARNING_FILL
+
+    auto_fit_columns(ws)
+    freeze_panes(ws)
+
+    return rm_total_closing + pkg_total_closing
+
+
 def write_exceptions_sheet(wb, exceptions):
     if not exceptions:
         return
@@ -517,13 +731,19 @@ def write_exceptions_sheet(wb, exceptions):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main(input_dir, period_start, period_end, output_file, coa_file=None):
-    input_dir = Path(input_dir)
+def main(ledgers_dir, period_start, period_end, output_file, master_dir=None):
+    ledgers_dir = Path(ledgers_dir)
+
+    # Load COA from master_dir
+    coa_file = None
+    if master_dir:
+        coa_path = Path(master_dir) / 'chart_of_accounts.xlsx'
+        coa_file = str(coa_path) if coa_path.exists() else None
     coa = COAMapper(coa_file) if coa_file else COAMapper()
     exceptions = []
 
     # ─ 1. General Ledger ────────────────────────────────────────────────────
-    gl_file = find_ledger_file(input_dir, LEDGER_FILES['general_ledger'])
+    gl_file = find_ledger_file(ledgers_dir, LEDGER_FILES['general_ledger'])
     if not gl_file:
         print("ERROR: general_ledger.xlsx not found in input directory.")
         sys.exit(1)
@@ -536,7 +756,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 2. AR Ledger ─────────────────────────────────────────────────────────
     ar_entities = {}
-    ar_file = find_ledger_file(input_dir, LEDGER_FILES['ar_ledger'])
+    ar_file = find_ledger_file(ledgers_dir, LEDGER_FILES['ar_ledger'])
     if ar_file:
         ar_entities, err = process_subsidiary_ledger(
             ar_file, period_start, period_end,
@@ -549,7 +769,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 3. AP Ledger ─────────────────────────────────────────────────────────
     ap_entities = {}
-    ap_file = find_ledger_file(input_dir, LEDGER_FILES['ap_ledger'])
+    ap_file = find_ledger_file(ledgers_dir, LEDGER_FILES['ap_ledger'])
     if ap_file:
         ap_entities, err = process_subsidiary_ledger(
             ap_file, period_start, period_end,
@@ -562,7 +782,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 4. Cash Ledger ───────────────────────────────────────────────────────
     cash_banks = {}
-    cash_file = find_ledger_file(input_dir, LEDGER_FILES['cash_ledger'])
+    cash_file = find_ledger_file(ledgers_dir, LEDGER_FILES['cash_ledger'])
     if cash_file:
         cash_banks, err = process_cash_ledger(cash_file, period_start, period_end)
         if err:
@@ -573,7 +793,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
 
     # ─ 5. Fixed Assets ──────────────────────────────────────────────────────
     assets = []
-    fa_file = find_ledger_file(input_dir, LEDGER_FILES['fixed_assets'])
+    fa_file = find_ledger_file(ledgers_dir, LEDGER_FILES['fixed_assets'])
     if fa_file:
         assets, err = process_fixed_assets(fa_file)
         if err:
@@ -582,11 +802,35 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
         exceptions.append({'ledger': 'Fixed Assets', 'issue': 'File not found (optional)'})
     print(f"  Fixed Assets   : {len(assets)} assets")
 
+    # ─ 6. Raw Materials Ledger ─────────────────────────────────────────────
+    rm_items = {}
+    rm_total = 0.0
+    rm_file = find_ledger_file(ledgers_dir, LEDGER_FILES['raw_materials_ledger'])
+    if rm_file:
+        rm_items, rm_total, err = process_inventory_ledger(rm_file, period_start, period_end)
+        if err:
+            exceptions.append({'ledger': 'Raw Materials Ledger', 'issue': err})
+    else:
+        exceptions.append({'ledger': 'Raw Materials Ledger', 'issue': 'File not found'})
+    print(f"  Raw Materials  : {len(rm_items)} items, total {rm_total:,.0f}")
+
+    # ─ 7. Packaging Ledger ──────────────────────────────────────────────────
+    pkg_items = {}
+    pkg_total = 0.0
+    pkg_file = find_ledger_file(ledgers_dir, LEDGER_FILES['packaging_ledger'])
+    if pkg_file:
+        pkg_items, pkg_total, err = process_inventory_ledger(pkg_file, period_start, period_end)
+        if err:
+            exceptions.append({'ledger': 'Packaging Ledger', 'issue': err})
+    else:
+        exceptions.append({'ledger': 'Packaging Ledger', 'issue': 'File not found'})
+    print(f"  Packaging      : {len(pkg_items)} items, total {pkg_total:,.0f}")
+
     # ─ Build workbook ───────────────────────────────────────────────────────
     wb = create_workbook()
 
     write_dashboard(wb, gl_accounts, ar_entities, ap_entities, cash_banks,
-                     assets, exceptions, period_start, period_end)
+                     assets, exceptions, period_start, period_end, rm_items, pkg_items)
     write_gl_balances(wb, gl_accounts, period_start, period_end)
 
     ar_total   = 0.0
@@ -612,6 +856,11 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
             '4472C4', period_start, period_end)
 
     write_fixed_assets_sheet(wb, assets)
+
+    # Inventory Summary Sheet
+    if rm_items or pkg_items:
+        write_inventory_sheet(wb, rm_items, pkg_items, gl_accounts)
+
     all_ok = write_control_account_sheet(
         wb, gl_accounts, ar_total, ap_total, cash_total,
         ar_entities, ap_entities, cash_banks)
@@ -626,19 +875,28 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None):
     gl_ar   = gl_accounts.get(AR_GL_ACCOUNT,  {}).get('closing', 0)
     gl_ap   = gl_accounts.get(AP_GL_ACCOUNT,  {}).get('closing', 0)
     gl_cash = sum(gl_accounts.get(c, {}).get('closing', 0) for c in CASH_GL_ACCOUNTS)
+    gl_rm   = gl_accounts.get(12000, {}).get('closing', 0)
+    gl_pkg  = gl_accounts.get(12100, {}).get('closing', 0)
 
     print(f"\nSaved to: {output_file}")
     print(f"Control Checks:")
     print(f"  AR  — GL: {gl_ar:,.0f}  |  Subsidiary: {ar_total:,.0f}  |  {'MATCH' if abs(gl_ar - ar_total) < 0.01 else 'MISMATCH'}")
     print(f"  AP  — GL: {gl_ap:,.0f}  |  Subsidiary: {ap_total:,.0f}  |  {'MATCH' if abs(gl_ap - ap_total) < 0.01 else 'MISMATCH'}")
     print(f"  Cash— GL: {gl_cash:,.0f}  |  Subsidiary: {cash_total:,.0f}  |  {'MATCH' if abs(gl_cash - cash_total) < 0.01 else 'MISMATCH'}")
+
+    # Inventory reconciliation
+    rm_sub = sum(i['closing_value'] for i in rm_items.values()) if rm_items else 0
+    pkg_sub = sum(i['closing_value'] for i in pkg_items.values()) if pkg_items else 0
+    print(f"  RM  — GL: {gl_rm:,.0f}  |  Sub-Ledger: {rm_sub:,.0f}  |  {'MATCH' if abs(gl_rm - rm_sub) < 0.01 else 'MISMATCH' if rm_items else 'N/A'}")
+    print(f"  Pkg — GL: {gl_pkg:,.0f}  |  Sub-Ledger: {pkg_sub:,.0f}  |  {'MATCH' if abs(gl_pkg - pkg_sub) < 0.01 else 'MISMATCH' if pkg_items else 'N/A'}")
+
     if exceptions:
         print(f"Warnings: {len(exceptions)} (see Exceptions sheet)")
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print("Usage: python summarize_ledgers.py <input_dir> <period_start> <period_end> <output_file> [coa_file]")
+        print("Usage: python summarize_ledgers.py <ledgers_dir> <period_start> <period_end> <output_file> [master_dir]")
         sys.exit(1)
-    coa = sys.argv[5] if len(sys.argv) > 5 else None
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], coa)
+    master_dir = sys.argv[5] if len(sys.argv) > 5 else None
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], master_dir)

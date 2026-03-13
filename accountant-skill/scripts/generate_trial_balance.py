@@ -10,13 +10,14 @@ Produces a Trial Balance workbook containing:
   - Dashboard                 (Dr=Cr validation for both TB columns)
 
 Usage:
-    python generate_trial_balance.py <data_dir> <period_start> <period_end> <output_file>
+    python generate_trial_balance.py <ledgers_dir> <output_dir> <period_start> <period_end> <output_file>
 
     python generate_trial_balance.py \\
-        data/Jan2026 \\
+        data/input/ledgers \\
+        data/output/Jan2026 \\
         2026-01-01 \\
         2026-01-31 \\
-        data/Jan2026/trial_balance_Jan2026.xlsx
+        data/output/Jan2026/trial_balance_Jan2026.xlsx
 
 Output sheets:
     Dashboard     -- totals, Dr=Cr validation for unadjusted and adjusted TB
@@ -748,29 +749,33 @@ def write_exceptions_sheet(wb, exceptions):
 # ---------------------------------------------------------------------------
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir     = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end   = sys.argv[3]
-    output_file  = sys.argv[4]
+    ledgers_dir  = sys.argv[1]
+    output_dir   = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end   = sys.argv[4]
+    output_file  = sys.argv[5]
 
     print(f"\n{'='*60}")
     print(f"  MODULE 5 -- GENERATE TRIAL BALANCE")
     print(f"  Period : {period_start}  to  {period_end}")
-    print(f"  Data   : {data_dir}")
+    print(f"  Ledgers: {ledgers_dir}")
     print(f"  Output : {output_file}")
     print(f"{'='*60}\n")
 
-    coa_path = Path(data_dir) / 'chart_of_accounts.xlsx'
+    coa_path = Path(ledgers_dir) / 'chart_of_accounts.xlsx'
+    # Try master dir if not in ledgers_dir
+    if not coa_path.exists():
+        coa_path = Path('data/input/master/chart_of_accounts.xlsx')
     coa      = COAMapper(str(coa_path)) if coa_path.exists() else COAMapper()
     exceptions = []
 
     # ── 1. GL balances (unadjusted) ──────────────────────────────────────────
     print("Loading GL balances...")
-    gl_balances, err = load_gl_balances(data_dir, period_start, period_end, coa)
+    gl_balances, err = load_gl_balances(ledgers_dir, period_start, period_end, coa)
     if err:
         print(f"  ERROR: {err}")
         exceptions.append(err)
@@ -780,7 +785,7 @@ def main():
 
     # ── 2. Adjusting entries ─────────────────────────────────────────────────
     print("\nLoading adjusting entries...")
-    adj_entries, warn = load_adj_entries(data_dir)
+    adj_entries, warn = load_adj_entries(output_dir)
     if warn:
         print(f"  WARNING: {warn}")
         exceptions.append(warn)

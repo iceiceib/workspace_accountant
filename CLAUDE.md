@@ -14,57 +14,65 @@ Full-cycle accounting automation for K&K Business (Shwe Mandalay Cafe). All inpu
 
 ## Module Run Commands
 
-All scripts run from the `accountant-skill/` directory. Replace `data/Jan2026` and dates with the actual period.
+All scripts run from the `accountant-skill/` directory.
+
+**Folder Structure:**
+- `data/input/` — All input files (period-independent)
+  - `master/` — chart_of_accounts.xlsx, profit_cost_centers.xlsx
+  - `journals/` — sales_journal.xlsx, purchases_journal.xlsx, etc.
+  - `ledgers/` — general_ledger.xlsx, ar_ledger.xlsx, etc.
+  - `bank/` — bank_statement.xlsx
+  - `inventory/` — inventory_items.xlsx
+- `data/output/<PERIOD>/` — All generated outputs (e.g., Jan2026)
 
 **Module 1 — Summarize Journals:**
 ```
-python scripts/summarize_journals.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/books_of_prime_entry_Jan2026.xlsx \
-  data/Jan2026/chart_of_accounts.xlsx \
-  data/Jan2026/profit_cost_centers.xlsx
+python scripts/summarize_journals.py data/input/journals 2026-01-01 2026-01-31 \
+  data/output/Jan2026/books_of_prime_entry_Jan2026.xlsx \
+  data/input/master
 ```
 
 **Module 2 — Summarize Ledgers:**
 ```
-python scripts/summarize_ledgers.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/ledger_summary_Jan2026.xlsx \
-  data/Jan2026/chart_of_accounts.xlsx
+python scripts/summarize_ledgers.py data/input/ledgers 2026-01-01 2026-01-31 \
+  data/output/Jan2026/ledger_summary_Jan2026.xlsx \
+  data/input/master
 ```
 
 **Module 3 — Bank Reconciliation:**
 ```
-python scripts/reconcile_bank.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/bank_reconciliation_Jan2026.xlsx
+python scripts/reconcile_bank.py data/input/ledgers data/input/bank 2026-01-01 2026-01-31 \
+  data/output/Jan2026/bank_reconciliation_Jan2026.xlsx
 ```
 
 **Module 4 — Journal Adjustments:**
 ```
-python scripts/journal_adjustments.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/adjusting_entries_Jan2026.xlsx
+python scripts/journal_adjustments.py data/input/ledgers data/output/Jan2026 2026-01-01 2026-01-31 \
+  data/output/Jan2026/adjusting_entries_Jan2026.xlsx
 ```
 
 **Module 5 — Trial Balance:**
 ```
-python scripts/generate_trial_balance.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/trial_balance_Jan2026.xlsx
+python scripts/generate_trial_balance.py data/input/ledgers data/output/Jan2026 2026-01-01 2026-01-31 \
+  data/output/Jan2026/trial_balance_Jan2026.xlsx
 ```
 
 **Module 6 — Financial Statements:**
 ```
-python scripts/generate_financials.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/financial_statements_Jan2026.xlsx
+python scripts/generate_financials.py data/input/ledgers data/output/Jan2026 2026-01-01 2026-01-31 \
+  data/output/Jan2026/financial_statements_Jan2026.xlsx
 ```
 
 **Module 7 — Full-Cycle Validation:**
 ```
-python scripts/validate_accounting.py data/Jan2026 2026-01-01 2026-01-31 \
-  data/Jan2026/audit_validation_Jan2026.xlsx
+python scripts/validate_accounting.py data/input data/output/Jan2026 2026-01-01 2026-01-31 \
+  data/output/Jan2026/audit_validation_Jan2026.xlsx
 ```
 
 **Generate test data (once only):**
 ```
-python scripts/create_test_data.py data/Jan2026
-python scripts/create_bank_statement.py data/Jan2026
+python scripts/create_test_data.py data/input
+python scripts/create_bank_statement.py data/input/bank
 ```
 
 ---
@@ -99,9 +107,9 @@ All module scripts import from `scripts/utils/`:
 
 ### Data Flow Between Modules
 
-- Module 3 → Module 4: `bank_reconciliation_Jan2026.xlsx` "Adjusting Entries" sheet (header detection needed — title block precedes column headers; scan for row containing 'Date').
-- Module 4 → Module 5: `adjusting_entries_Jan2026.xlsx` "All Entries" sheet (filter out TOTALS row by checking Dr/Cr codes are numeric).
-- Module 5 → Module 6: `trial_balance_Jan2026.xlsx` "Adjusted TB" sheet.
+- Module 3 → Module 4: `data/output/<PERIOD>/bank_reconciliation_<PERIOD>.xlsx` "Adjusting Entries" sheet (header detection needed — title block precedes column headers; scan for row containing 'Date').
+- Module 4 → Module 5: `data/output/<PERIOD>/adjusting_entries_<PERIOD>.xlsx` "All Entries" sheet (filter out TOTALS row by checking Dr/Cr codes are numeric).
+- Module 5 → Module 6: `data/output/<PERIOD>/trial_balance_<PERIOD>.xlsx` "Adjusted TB" sheet.
 
 ---
 

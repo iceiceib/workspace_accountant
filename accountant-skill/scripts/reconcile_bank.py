@@ -6,13 +6,14 @@ Compares the internal cash book (cash_ledger.xlsx) against the external bank
 statement (bank_statement.xlsx) and produces a formal reconciliation workbook.
 
 Usage:
-    python reconcile_bank.py <data_dir> <period_start> <period_end> <output_file>
+    python reconcile_bank.py <ledgers_dir> <bank_dir> <period_start> <period_end> <output_file>
 
     python reconcile_bank.py \\
-        data/Jan2026 \\
+        data/input/ledgers \\
+        data/input/bank \\
         2026-01-01 \\
         2026-01-31 \\
-        data/Jan2026/bank_reconciliation_Jan2026.xlsx
+        data/output/Jan2026/bank_reconciliation_Jan2026.xlsx
 
 Output sheets:
     Dashboard             — summary: adjusted book = adjusted bank (PASS/FAIL)
@@ -753,19 +754,21 @@ def write_exceptions_sheet(wb, exceptions):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         print(__doc__)
         sys.exit(1)
 
-    data_dir = sys.argv[1]
-    period_start = sys.argv[2]
-    period_end = sys.argv[3]
-    output_file = sys.argv[4]
+    ledgers_dir = sys.argv[1]
+    bank_dir = sys.argv[2]
+    period_start = sys.argv[3]
+    period_end = sys.argv[4]
+    output_file = sys.argv[5]
 
     print(f"\n{'='*60}")
     print(f"  MODULE 3 — BANK RECONCILIATION")
     print(f"  Period : {period_start}  to  {period_end}")
-    print(f"  Data   : {data_dir}")
+    print(f"  Ledgers: {ledgers_dir}")
+    print(f"  Bank   : {bank_dir}")
     print(f"  Output : {output_file}")
     print(f"{'='*60}\n")
 
@@ -773,7 +776,7 @@ def main():
 
     # ── Load data ─────────────────────────────────────────────────────────────
     print("Loading cash ledger...")
-    book_df, book_opening, book_closing, err = load_cash_ledger(data_dir, period_start, period_end)
+    book_df, book_opening, book_closing, err = load_cash_ledger(ledgers_dir, period_start, period_end)
     if err:
         print(f"  ERROR: {err}")
         sys.exit(1)
@@ -782,7 +785,7 @@ def main():
     print(f"  Period rows     : {len(book_df)}")
 
     print("\nLoading bank statement...")
-    bank_df, bank_opening, bank_closing, err = load_bank_statement(data_dir, period_start, period_end)
+    bank_df, bank_opening, bank_closing, err = load_bank_statement(bank_dir, period_start, period_end)
     if err:
         print(f"  ERROR: {err}")
         sys.exit(1)

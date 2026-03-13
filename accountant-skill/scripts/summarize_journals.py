@@ -3,10 +3,10 @@ Module 1: Summarize Books of Prime Entry
 Reads all 6 journals for a period and produces a consolidated summary.
 
 Usage:
-    python summarize_journals.py <input_dir> <period_start> <period_end> <output_file> [coa_file] [pcc_file]
+    python summarize_journals.py <journals_dir> <period_start> <period_end> <output_file> <master_dir>
 
 Example:
-    python summarize_journals.py data/Jan2026 2026-01-01 2026-01-31 data/Jan2026/books_of_prime_entry_Jan2026.xlsx data/Jan2026/chart_of_accounts.xlsx data/Jan2026/profit_cost_centers.xlsx
+    python summarize_journals.py data/input/journals 2026-01-01 2026-01-31 data/output/Jan2026/books_of_prime_entry_Jan2026.xlsx data/input/master
 """
 import sys
 import os
@@ -226,9 +226,20 @@ def write_cc_summary_sheet(wb, cc_summary, period_start, period_end, pcc=None):
     freeze_panes(ws)
 
 
-def main(input_dir, period_start, period_end, output_file, coa_file=None, pcc_file=None):
-    input_dir = Path(input_dir)
+def main(journals_dir, period_start, period_end, output_file, master_dir=None):
+    journals_dir = Path(journals_dir)
     wb = create_workbook()
+
+    # Load master files from master_dir
+    coa_file = None
+    pcc_file = None
+    if master_dir:
+        master_path = Path(master_dir)
+        coa_path = master_path / 'chart_of_accounts.xlsx'
+        pcc_path = master_path / 'profit_cost_centers.xlsx'
+        coa_file = str(coa_path) if coa_path.exists() else None
+        pcc_file = str(pcc_path) if pcc_path.exists() else None
+
     coa = COAMapper(coa_file) if coa_file else COAMapper()
     pcc = PCCCMapper(pcc_file) if pcc_file else PCCCMapper()
 
@@ -239,7 +250,7 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None, pcc_fi
 
     # ── Process each journal ─────────────────────────────────────────────────
     for journal_name, config in JOURNAL_CONFIGS.items():
-        filepath = find_journal_file(input_dir, config['filename_patterns'])
+        filepath = find_journal_file(journals_dir, config['filename_patterns'])
         if filepath is None:
             exceptions.append({'Journal': journal_name, 'Issue': 'File not found', 'Details': f"No file matching {config['filename_patterns']}"})
             continue
@@ -381,9 +392,8 @@ def main(input_dir, period_start, period_end, output_file, coa_file=None, pcc_fi
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print("Usage: python summarize_journals.py <input_dir> <period_start> <period_end> <output_file> [coa_file] [pcc_file]")
+        print("Usage: python summarize_journals.py <journals_dir> <period_start> <period_end> <output_file> [master_dir]")
         sys.exit(1)
 
-    coa = sys.argv[5] if len(sys.argv) > 5 else None
-    pcc = sys.argv[6] if len(sys.argv) > 6 else None
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], coa, pcc)
+    master_dir = sys.argv[5] if len(sys.argv) > 5 else None
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], master_dir)
