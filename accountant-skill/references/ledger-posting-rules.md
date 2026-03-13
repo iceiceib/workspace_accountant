@@ -46,7 +46,7 @@ Subsidiary ledgers must reconcile to their control accounts in the General Ledge
 |---|---|
 | Accounts Receivable Ledger (sum of all customer balances) | 11000 Accounts Receivable |
 | Accounts Payable Ledger (sum of all supplier balances) | 20000 Accounts Payable |
-| Cash Ledger (sum of all bank accounts) | 1020+1021+1022 Cash at Bank |
+| Cash Ledger (sum of all bank accounts) | 10100 Cash at Bank |
 
 If these don't match, there's a posting error that must be investigated.
 

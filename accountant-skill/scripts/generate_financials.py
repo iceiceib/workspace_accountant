@@ -104,7 +104,8 @@ def _is_numeric_code(val):
 
 def load_adjusted_tb(data_dir):
     """
-    Read the 'Adjusted TB' sheet from trial_balance_*.xlsx.
+    Read the trial balance sheet from trial_balance_*.xlsx.
+    Tries 'Adjusted TB' first, then 'Trial Balance' as fallback.
 
     The sheet has a title block before the column headers; scan for the row
     that contains 'Account Code' to find the true header row.
@@ -119,10 +120,21 @@ def load_adjusted_tb(data_dir):
 
     tb_file = candidates[0]
 
-    try:
-        df_raw = pd.read_excel(tb_file, sheet_name='Adjusted TB', header=None)
-    except Exception as e:
-        return [], f"Could not read 'Adjusted TB' sheet from {tb_file.name}: {e}"
+    # Try different sheet names
+    sheet_names_to_try = ['Adjusted TB', 'Trial Balance']
+    df_raw = None
+    sheet_used = None
+
+    for sheet_name in sheet_names_to_try:
+        try:
+            df_raw = pd.read_excel(tb_file, sheet_name=sheet_name, header=None)
+            sheet_used = sheet_name
+            break
+        except Exception:
+            continue
+
+    if df_raw is None:
+        return [], f"Could not read trial balance from {tb_file.name}. Tried sheets: {sheet_names_to_try}"
 
     # Find header row: scan for row containing 'Account Code'
     header_row_idx = None
@@ -133,12 +145,12 @@ def load_adjusted_tb(data_dir):
             break
 
     if header_row_idx is None:
-        return [], f"Could not find 'Account Code' header in 'Adjusted TB' sheet of {tb_file.name}"
+        return [], f"Could not find 'Account Code' header in '{sheet_used}' sheet of {tb_file.name}"
 
     try:
-        df = pd.read_excel(tb_file, sheet_name='Adjusted TB', header=header_row_idx)
+        df = pd.read_excel(tb_file, sheet_name=sheet_used, header=header_row_idx)
     except Exception as e:
-        return [], f"Could not re-read 'Adjusted TB' with header at row {header_row_idx}: {e}"
+        return [], f"Could not re-read '{sheet_used}' with header at row {header_row_idx}: {e}"
 
     df = _normalize_cols(df)
 
@@ -1048,6 +1060,142 @@ def write_cash_flow(wb, cf_data, period_start, period_end):
     freeze_panes(ws)
 
 
+def write_financial_notes(wb, accounts, coa, period_end):
+    """
+    Write the Financial Notes sheet with detailed breakdown of accounts
+    grouped by Type and Sub-Type.
+    """
+    ws = add_sheet(wb, 'Financial Notes', tab_color='70AD47')
+    row = write_title(ws, 'Financial Notes',
+                      'Detailed Breakdown of Financial Statement Accounts',
+                      f'As at {period_end}')
+
+    # Build a structured view of accounts by type and sub-type
+    # Structure: {type: {sub_type: {group: [accounts]}}}
+    structure = {}
+
+    for acct in accounts:
+        code = acct['code']
+        balance = acct['balance']
+
+        # Skip zero-balance accounts
+        if abs(balance) < 0.01:
+            continue
+
+        info = coa.get_account(code)
+        if not info:
+            continue
+
+        acct_type = info.get('type', 'Unknown')
+        sub_type = info.get('sub_type', '')
+        group = info.get('group', '')
+
+        if acct_type not in structure:
+            structure[acct_type] = {}
+        if sub_type not in structure[acct_type]:
+            structure[acct_type][sub_type] = {}
+        if group not in structure[acct_type][sub_type]:
+            structure[acct_type][sub_type][group] = []
+
+        structure[acct_type][sub_type][group].append({
+            'code': code,
+            'name': acct['name'],
+            'balance': balance,
+            'normal_balance': info.get('normal_balance', 'Debit')
+        })
+
+    # Define the order of sections
+    type_order = ['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']
+
+    # Section numbering
+    section_num = 0
+
+    for acct_type in type_order:
+        if acct_type not in structure:
+            continue
+
+        section_num += 1
+        type_total = 0.0
+
+        # Section header for Type
+        if acct_type == 'Asset':
+            section_title = 'BALANCE SHEET NOTES'
+            row = write_section_header(ws, section_title, row, col_span=4)
+
+        if acct_type in ['Liability', 'Equity'] and acct_type == 'Liability':
+            # Already printed Assets, continue with Liabilities
+            pass
+
+        if acct_type == 'Revenue':
+            row += 1
+            row = write_section_header(ws, 'INCOME STATEMENT NOTES', row, col_span=4)
+
+        # Type header (e.g., "1. CURRENT ASSETS")
+        type_label = f"{section_num}. {acct_type.upper()}"
+        row = write_section_header(ws, type_label, row, col_span=4)
+
+        # Process each sub-type within this type
+        sub_type_order = sorted(structure[acct_type].keys())
+
+        for sub_type in sub_type_order:
+            sub_type_total = 0.0
+            groups = structure[acct_type][sub_type]
+
+            # Sub-type header (e.g., "Cash and Cash Equivalents")
+            sub_type_display = sub_type if sub_type else 'Other'
+            row = write_data_row(ws, ['', sub_type_display, '', ''], row)
+            ws.cell(row=row - 1, column=2).font = Font(bold=True, italic=True, size=11, name='Arial')
+
+            # Process each group within this sub-type
+            group_order = sorted(groups.keys())
+
+            for group_name in group_order:
+                group_accounts = groups[group_name]
+
+                # Sort accounts by code within group
+                group_accounts.sort(key=lambda x: x['code'])
+
+                for acct_info in group_accounts:
+                    code = acct_info['code']
+                    name = acct_info['name']
+                    balance = acct_info['balance']
+                    normal = acct_info['normal_balance']
+
+                    # For contra accounts, show negative balance
+                    display_balance = balance if normal == 'Debit' else -balance
+
+                    row = write_data_row(ws, [
+                        str(code),
+                        f'  {name}',
+                        _n(abs(balance)),
+                        None
+                    ], row, number_cols=[3, 4])
+
+                    # Track total (use absolute balance for accumulation)
+                    sub_type_total += abs(balance)
+
+            # Sub-type subtotal
+            if len(groups) > 1 or sub_type:
+                row = write_total_row(ws, f'Total {sub_type_display}',
+                                      [None, None, _n(sub_type_total)], row)
+                row += 1
+
+            type_total += sub_type_total
+
+        # Type total
+        row = write_total_row(ws, f'TOTAL {acct_type.upper()}',
+                              [None, None, _n(type_total)], row, double_line=True)
+        row += 2
+
+    # Set column widths
+    auto_fit_columns(ws)
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 45
+    ws.column_dimensions['C'].width = 18
+    ws.column_dimensions['D'].width = 18
+    freeze_panes(ws)
+
+
 def write_exceptions_sheet(wb, exceptions):
     ws  = add_sheet(wb, 'Exceptions', tab_color='FF0000')
     row = write_title(ws, 'Exceptions & Warnings',
@@ -1167,13 +1315,14 @@ def main():
     write_dashboard(wb, is_data, bs_data, cf_data, period_start, period_end, exceptions)
     write_income_statement(wb, is_data, period_start, period_end)
     write_balance_sheet(wb, bs_data, period_end)
+    write_financial_notes(wb, accounts, coa, period_end)
     write_cash_flow(wb, cf_data, period_start, period_end)
     if exceptions:
         write_exceptions_sheet(wb, exceptions)
 
     save_workbook(wb, output_file)
 
-    sheets = 'Dashboard | Income Statement | Balance Sheet | Cash Flow'
+    sheets = 'Dashboard | Income Statement | Balance Sheet | Financial Notes | Cash Flow'
     if exceptions:
         sheets += ' | Exceptions'
 

@@ -91,11 +91,11 @@ Items on the bank statement that are NOT in the cash book require adjusting jour
 
 | Reconciling Item | Debit | Credit |
 |---|---|---|
-| Bank charges | 5920 Bank Charges | 10100 Cash at Bank |
-| Bank interest earned | 10100 Cash at Bank | 4110 Interest Income |
-| Direct debit (e.g., insurance) | 5700 Insurance Expense | 10100 Cash at Bank |
-| Direct credit (customer payment) | 10100 Cash at Bank | 1100 Accounts Receivable |
-| Dishonoured cheque | 1100 Accounts Receivable | 10100 Cash at Bank |
+| Bank charges | 68000 Other Expenses | 10100 Cash at Bank |
+| Bank interest earned | 10100 Cash at Bank | 70000 Interest Income |
+| Direct debit (e.g., insurance) | 68000 Other Expenses | 10100 Cash at Bank |
+| Direct credit (customer payment) | 10100 Cash at Bank | 11000 Accounts Receivable |
+| Dishonoured cheque | 11000 Accounts Receivable | 10100 Cash at Bank |
 
 These entries should be output as "Required Adjusting Entries" and can feed directly into Module 4.
 
