@@ -1,6 +1,6 @@
 # Accountant Skill — User Guide
 ### K&K Finance Team
-*Last updated: 2026-03-11 | Covers Modules 1–7 + Inventory Tracking*
+*Last updated: 2026-03-13 | Covers Modules 1–7 + Batch Processing + Financial Notes + Inventory Tracking*
 
 ---
 
@@ -17,13 +17,15 @@
 9. [Module 5 — Trial Balance](#9-module-5--trial-balance)
 10. [Module 6 — Financial Statements](#10-module-6--financial-statements)
 11. [Module 7 — Full-Cycle Validation](#11-module-7--full-cycle-validation)
-12. [Work-in-Progress (WIP) Accounting](#12-work-in-progress-wip-accounting)
-13. [Inventory Sub-Ledger Tracking](#13-inventory-sub-ledger-tracking)
-14. [Input File Formats](#14-input-file-formats)
-15. [Output Formatting Standards](#15-output-formatting-standards)
-16. [Troubleshooting & Common Errors](#16-troubleshooting--common-errors)
+12. [Batch Processing for Multiple Periods](#12-batch-processing-for-multiple-periods)
+13. [Financial Notes (IFRS-Compliant)](#13-financial-notes-ifrs-compliant)
+14. [Work-in-Progress (WIP) Accounting](#14-work-in-progress-wip-accounting)
+15. [Inventory Sub-Ledger Tracking](#15-inventory-sub-ledger-tracking)
+16. [Input File Formats](#16-input-file-formats)
+17. [Output Formatting Standards](#17-output-formatting-standards)
+18. [Troubleshooting & Common Errors](#18-troubleshooting--common-errors)
     - [Module 7 — Validation Failures](#module-7--validation-failures)
-17. [Quick Reference — All Commands](#quick-reference--all-commands)
+19. [Quick Reference — All Commands](#quick-reference--all-commands)
 
 ---
 
@@ -707,11 +709,11 @@ Starting from Net Profit, the module makes three sets of adjustments:
 - Current asset decrease → positive CF (cash released)
 - Current liability increase → positive CF (cash not yet paid)
 - Current liability decrease → negative CF (cash paid)
-- Includes the Allowance for Doubtful Debts (1110) as a credit-normal working capital item
+- Includes the Inventory Adjustments (12300) as a credit-normal working capital item
 
 **3. Investing and Financing:**
-- Investing: changes in fixed asset accounts (1600–1660)
-- Financing: changes in capital (31000), drawings (30200), loans (250000, 2100, 2110)
+- Investing: changes in fixed asset accounts (15000–15600)
+- Financing: changes in capital (31000), loans (25000, 21000)
 
 ---
 
@@ -862,7 +864,184 @@ Validation complete: 5/5 passed, 0 failed, 0 warnings
 
 ---
 
-## 12. Work-in-Progress (WIP) Accounting
+## 12. Batch Processing for Multiple Periods
+
+### What it does
+
+The batch processing script (`batch_process_all_months.py`) automates the complete accounting cycle for multiple periods (months) in sequence. It:
+
+1. **Chains opening balances** — Closing balance from one period becomes opening balance for the next
+2. **Tracks Retained Earnings** — Accumulates net profit/loss across all periods
+3. **Generates all outputs** — Trial Balance, Financial Statements for each month
+4. **Validates each period** — Ensures Dr = Cr and Assets = Equity + Liabilities
+
+### When to use it
+
+Use batch processing when you need to process multiple months of historical data or set up a new accounting system with several periods of back-data.
+
+### Input files required
+
+| File | Location | What it contains |
+|---|---|---|
+| `General_Ledger_edited.xlsx` | `Exisitng Accounting Workflow _ reference files/Ledger Accounts/` | Complete GL with all transactions |
+| `chart_of_accounts.xlsx` | `data/input/master/` | Chart of Accounts with **Opening Balance** column |
+
+### Setting up Opening Balances
+
+The `chart_of_accounts.xlsx` file must include an **Opening Balance** column (Column G) with the opening balances for the first period:
+
+| Account Code | Account Name | Type | ... | Opening Balance |
+|-------------|--------------|------|-----|-----------------|
+| 12000 | Inventory - Raw Material | Asset | ... | 5,605,177 |
+| 12100 | Inventory - Packaging | Asset | ... | 7,899,300 |
+| 15000 | Land | Asset | ... | 219,000,000 |
+| 31000 | Paid-up Capital | Equity | ... | 439,530,823 |
+
+**Important:** Opening balances must balance:
+- Total Debit Opening Balances = Total Credit Opening Balances
+
+### How to run
+
+```bash
+cd accountant-skill
+python scripts/batch_process_all_months.py
+```
+
+The script is pre-configured to process Feb 2025 through Oct 2025. Edit the `MONTHS` variable in the script to change the periods.
+
+### Output
+
+For each period, the script generates:
+- `data/output/[PERIOD]/trial_balance_[PERIOD].xlsx` — Trial Balance with Opening/Movement/Closing
+- `data/output/[PERIOD]/financial_statements_[PERIOD].xlsx` — Income Statement, Balance Sheet
+
+### Balance Chaining
+
+The script maintains a running chain of balances:
+
+```
+Feb 2025: Opening from COA → Closing → Pass to Mar 2025
+Mar 2025: Opening from Feb closing → Closing → Pass to Apr 2025
+...
+Oct 2025: Opening from Sep closing → Final closing
+```
+
+Retained Earnings accumulates: Each period's Net Profit/Loss is added to the cumulative Retained Earnings.
+
+### Sample Output
+
+```
+============================================================
+BATCH PROCESSING WITH BALANCE CHAINING
+Feb 2025 - Oct 2025
+============================================================
+
+Loading General Ledger...
+  Total GL rows: 758
+Loading Chart of Accounts...
+  Total accounts: 60
+  Accounts with opening balances: 11
+  Total Opening Debits: 473,566,123.00
+  Total Opening Credits: 473,566,123.00
+
+============================================================
+Processing: Feb2025
+============================================================
+  GL transactions: 80
+  Creating Trial Balance...
+    Period Dr: 900,155,454.99 | Period Cr: 900,155,454.99
+  Creating Financial Statements...
+    Net Profit: 559,498.11
+
+...
+
+============================================================
+SUMMARY
+============================================================
+Period       |       Period Dr |       Period Cr |      Net Profit | Balanced
+--------------------------------------------------------------------------------
+Feb2025      |  900,155,454.99 |  900,155,454.99 |      559,498.11 | YES
+Mar2025      |  281,173,702.22 |  281,173,702.22 |      405,545.20 | YES
+...
+Oct2025      |  817,611,890.69 |  817,611,890.69 |     -549,270.91 | YES
+```
+
+---
+
+## 13. Financial Notes (IFRS-Compliant)
+
+### What it does
+
+The Financial Notes script (`add_financial_notes_v3.py`) adds a detailed **Financial Notes** sheet to existing Financial Statements. This provides:
+
+1. **IFRS-compliant presentation** — Assets shown at Net Book Value (accumulated depreciation in notes, not on Balance Sheet face)
+2. **Opening/Movement/Closing columns** — Shows changes during the period
+3. **Detailed account breakdowns** — Each note breaks down the related accounts
+
+### When to run it
+
+After generating Financial Statements (Module 6 or batch processing), run this script to add the Financial Notes sheet.
+
+### How to run
+
+```bash
+python scripts/add_financial_notes_v3.py \
+  data/output/Feb2025/financial_statements_Feb2025.xlsx \
+  data/output/Feb2025/trial_balance_Feb2025.xlsx
+```
+
+**Arguments in order:**
+1. Financial Statements file path
+2. Trial Balance file path (for Opening/Movement/Closing data)
+
+### Output
+
+The script modifies the Financial Statements file in place:
+
+1. **Balance Sheet** — Removes accumulated depreciation lines (assets shown at NBV)
+2. **Financial Notes sheet** — Added with detailed breakdowns
+
+### Financial Notes Structure
+
+| Note | Title | What it shows |
+|------|-------|---------------|
+| Note 1 | Revenue | Sales Revenue with Opening/Movement/Closing |
+| Note 2 | Cost of Goods Sold | COGS breakdown |
+| Note 3 | SG&A Expenses | Operating expenses by category |
+| Note 4 | Depreciation & Amortization | Depreciation expenses |
+| Note 5 | Other Income | Interest income, other revenue |
+| Note 11 | Cash and Cash Equivalents | Cash in hand, Cash at Bank |
+| Note 12 | Accounts Receivable | AR balance |
+| Note 13 | Inventory | Raw Material, Packaging, WIP, Finished Goods |
+| Note 14 | Advance Payments | Prepaid items |
+| Note 15 | Deferred Preliminary Expenses | Deferred costs |
+| Note 16 | Property, Plant and Equipment | All PPE with Accumulated Depreciation |
+| Note 17 | Paid-up Capital | Share capital |
+| Note 18 | Retained Earnings | Accumulated profits |
+| Note 19 | Liabilities | Payables, loans |
+
+### Example: Note 16 — Property, Plant and Equipment
+
+```
+Note 16 | Property, Plant and Equipment
+Opening | Movement | Closing
+  Land                  | 219,000,000 | 210,290,000 | 429,290,000
+  Buildings & Structures| 133,000,000 |             | 133,000,000
+  Machinery & Equipment |  66,400,000 |             |  66,400,000
+  Electrical & Utility  |   7,200,000 |   6,856,000 |  14,056,000
+  Construction in Progress|           |  90,334,300 |  90,334,300
+  Less: Accumulated Depreciation |     |             | -34,980,725
+```
+
+### IFRS Compliance Notes
+
+- **Balance Sheet** shows assets at Net Book Value (Cost - Accumulated Depreciation)
+- **Accumulated Depreciation** is disclosed in Note 16, not on the Balance Sheet face
+- **Opening/Movement/Closing** provides full reconciliation of account changes
+
+---
+
+## 14. Work-in-Progress (WIP) Accounting
 
 ### Overview
 
@@ -990,7 +1169,7 @@ When WIP accounts are active, Module 7 validates:
 
 ---
 
-## 13. Inventory Sub-Ledger Tracking
+## 15. Inventory Sub-Ledger Tracking
 
 ### Overview
 
@@ -1219,7 +1398,7 @@ Cost of Goods Sold (50000-50399)
 
 ---
 
-## 14. Input File Formats
+## 16. Input File Formats
 
 All input files are `.xlsx` with a **single header row** at row 1. The scripts use flexible column matching — minor variations in column names (e.g. `Debit Amount` vs `Debit`) are handled automatically.
 
@@ -1315,7 +1494,7 @@ All input files are `.xlsx` with a **single header row** at row 1. The scripts u
 
 ---
 
-## 15. Output Formatting Standards
+## 17. Output Formatting Standards
 
 All output files follow a consistent professional format:
 
@@ -1343,7 +1522,7 @@ All output files follow a consistent professional format:
 
 ---
 
-## 16. Troubleshooting & Common Errors
+## 18. Troubleshooting & Common Errors
 
 ### "File not found" errors
 
@@ -1557,6 +1736,14 @@ python scripts/validate_accounting.py \
   data/Jan2026 2026-01-01 2026-01-31 \
   data/Jan2026/audit_validation_Jan2026.xlsx
 
+# BATCH PROCESSING — Multiple Months (Feb-Oct 2025)
+python scripts/batch_process_all_months.py
+
+# FINANCIAL NOTES — Add IFRS-compliant notes sheet
+python scripts/add_financial_notes_v3.py \
+  data/output/Feb2025/financial_statements_Feb2025.xlsx \
+  data/output/Feb2025/trial_balance_Feb2025.xlsx
+
 # INVENTORY — Create Inventory Sub-Ledgers
 python scripts/create_inventory_ledgers.py \
   data/Jan2026 2026-01-01 2026-01-31
@@ -1568,4 +1755,4 @@ python scripts/process_inventory.py \
 
 ---
 
-*All 7 modules are now complete with inventory sub-ledger tracking. The accounting cycle is fully automated from source journals through financial statements with end-to-end validation.*
+*All 7 modules are now complete with inventory sub-ledger tracking, batch processing for multiple periods, and IFRS-compliant Financial Notes. The accounting cycle is fully automated from source journals through financial statements with end-to-end validation.*
