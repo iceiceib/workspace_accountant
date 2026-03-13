@@ -127,3 +127,32 @@ M3 (Bank Recon) → M4 (Adjustments) → M5 (Adjusted TB)
 ### Lesson: Always Use Centralized Account Code Constants
 - Account codes should be defined in one place to prevent inconsistencies
 - Recommend creating `scripts/utils/constants.py` for all account codes
+
+## Input File Population from Reference Files (2026-03-13)
+
+### Script: scripts/create_input_files.py
+- Reads reference General Ledger and General Journal from `Exisitng Accounting Workflow _ reference files/`
+- Populates input files: cash_receipts_journal.xlsx, cash_payments_journal.xlsx, general_journal.xlsx
+- Handles 3 matching patterns for counterparty identification:
+  1. **Single counterparty**: Immediate neighbor with exact matching amount
+  2. **Multiple counterparties**: Grouped between cash entries, total amounts match
+  3. **Monthly summaries**: Description-based matching (e.g., "140ml" in both cash and revenue entries)
+
+### GL Transaction Matching Logic
+- Cash at Bank (10100) DEBITED = Cash Receipt (money in)
+- Cash at Bank (10100) CREDITED = Cash Payment (money out)
+- Counterparties are typically immediate neighbors (before/after cash entry)
+- Some monthly summaries have counterparties BEFORE the cash entry with different descriptions
+- Use ALL cash entries as boundaries (not just debits or credits) when searching for counterparties
+
+### Important: Input vs Output Separation
+- Input files (`data/input/`) should remain as source data
+- Processing scripts should ONLY write to output files (`data/output/`)
+- The `batch_process_all_months.py` had a bug where it wrote to input files
+- This overwrites source data and breaks audit trail
+
+### Results Verified
+- Cash Receipts: 207 entries, 1,732,445,359 MMK
+- Cash Payments: 129 entries, 1,469,287,817 MMK
+- General Journal: 176 adjustment entries
+- Difference from reference GL: 0.00 MMK (all transactions captured)
