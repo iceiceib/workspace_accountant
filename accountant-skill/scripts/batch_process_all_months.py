@@ -50,12 +50,13 @@ THICK_BOTTOM = Border(
 
 
 def load_coa():
-    """Load Chart of Accounts."""
+    """Load Chart of Accounts with opening balances."""
     coa_path = MASTER_DIR / 'chart_of_accounts.xlsx'
     df = pd.read_excel(coa_path)
     df.columns = [c.strip() for c in df.columns]
 
     accounts = {}
+    opening_balances = {}
     for _, row in df.iterrows():
         code = int(row['Account Code'])
         accounts[code] = {
@@ -66,7 +67,14 @@ def load_coa():
             'normal_balance': row['Normal Balance'].lower(),
             'status': row.get('Status', 'Active')
         }
-    return accounts
+        # Load opening balance
+        opening = row.get('Opening Balance', 0)
+        if pd.notna(opening) and opening != 0:
+            opening_balances[code] = float(opening)
+        else:
+            opening_balances[code] = 0.0
+
+    return accounts, opening_balances
 
 
 def write_simple_excel(data, filepath, sheet_name='Sheet1'):
@@ -629,11 +637,18 @@ def main():
 
     # Load COA
     print("Loading Chart of Accounts...")
-    coa = load_coa()
+    coa, coa_opening_balances = load_coa()
     print(f"  Total accounts: {len(coa)}")
+    print(f"  Accounts with opening balances: {len([v for v in coa_opening_balances.values() if v != 0])}")
 
-    # Initialize opening balances (all zeros for Feb 2025)
-    opening_balances = {code: 0.0 for code in coa.keys()}
+    # Initialize opening balances from COA (for Feb 2025)
+    opening_balances = coa_opening_balances.copy()
+
+    # Print opening balance summary
+    total_opening_dr = sum(v for k, v in opening_balances.items() if coa[k]['normal_balance'] == 'debit' and v > 0)
+    total_opening_cr = sum(v for k, v in opening_balances.items() if coa[k]['normal_balance'] == 'credit' and v > 0)
+    print(f"  Total Opening Debits: {total_opening_dr:,.2f}")
+    print(f"  Total Opening Credits: {total_opening_cr:,.2f}")
 
     # Initialize retained earnings (accumulated net profit/loss)
     retained_earnings = 0.0

@@ -137,6 +137,12 @@ class COAMapper:
                     if col in df.columns and pd.notna(row[col]):
                         key = col.replace('-', '_').replace(' ', '_')
                         entry[key] = str(row[col])
+                # Load opening balance
+                opening_col = 'opening balance' if 'opening balance' in df.columns else None
+                if opening_col and pd.notna(row[opening_col]):
+                    entry['opening_balance'] = float(row[opening_col])
+                else:
+                    entry['opening_balance'] = 0.0
                 self.coa_dict[code] = entry
         except Exception as e:
             print(f"Warning: Error loading COA: {e}. Using defaults.")
@@ -283,3 +289,20 @@ class COAMapper:
             return {'statement': 'BS', 'section': 'Equity', 'sign': sign}
 
         return None
+
+    def get_opening_balance(self, code):
+        """Get opening balance for an account code."""
+        info = self.get_account(code)
+        if info and 'opening_balance' in info:
+            return info['opening_balance']
+        return 0.0
+
+    def get_all_opening_balances(self):
+        """
+        Get all opening balances as a dictionary.
+        Returns: dict {code: opening_balance}
+        """
+        openings = {}
+        for code, info in self.coa_dict.items():
+            openings[code] = info.get('opening_balance', 0.0)
+        return openings
