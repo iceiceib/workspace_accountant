@@ -673,21 +673,24 @@ def main():
         print(f"  Cash Payments: {len(cash_payments)}")
         print(f"  General Journal: {len(general_journal)}")
 
-        # Write input files (for modules that need them)
-        journals_dir = OUTPUT_INPUT / 'journals'
-        write_simple_excel(cash_receipts, journals_dir / 'cash_receipts_journal.xlsx')
-        write_simple_excel(cash_payments, journals_dir / 'cash_payments_journal.xlsx')
-        write_simple_excel(general_journal, journals_dir / 'general_journal.xlsx')
-        write_simple_excel(gl_output, OUTPUT_INPUT / 'ledgers' / 'general_ledger.xlsx')
+        # Write intermediate files to OUTPUT directory (not input - preserves source data)
+        # These are extracted from GL for this period only
+        journals_output_dir = output_dir / 'extracted_journals'
+        journals_output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Run Module 1
+        write_simple_excel(cash_receipts, journals_output_dir / 'cash_receipts_journal.xlsx')
+        write_simple_excel(cash_payments, journals_output_dir / 'cash_payments_journal.xlsx')
+        write_simple_excel(general_journal, journals_output_dir / 'general_journal.xlsx')
+        write_simple_excel(gl_output, output_dir / 'extracted_gl.xlsx')
+
+        # Run Module 1 using extracted journals from output directory
         print(f"  Running Module 1...")
-        cmd = f'python scripts/summarize_journals.py data/input/journals {start_date} {end_date} data/output/{period_name}/books_of_prime_entry_{period_name}.xlsx data/input/master'
+        cmd = f'python scripts/summarize_journals.py {journals_output_dir} {start_date} {end_date} data/output/{period_name}/books_of_prime_entry_{period_name}.xlsx data/input/master'
         subprocess.run(cmd, shell=True, capture_output=True)
 
-        # Run Module 2
+        # Run Module 2 using extracted GL from output directory
         print(f"  Running Module 2...")
-        cmd = f'python scripts/summarize_ledgers.py data/input/ledgers {start_date} {end_date} data/output/{period_name}/ledger_summary_{period_name}.xlsx data/input/master'
+        cmd = f'python scripts/summarize_ledgers.py {output_dir} {start_date} {end_date} data/output/{period_name}/ledger_summary_{period_name}.xlsx data/input/master'
         subprocess.run(cmd, shell=True, capture_output=True)
 
         # Create Trial Balance directly (not using Module 5 to include all accounts)

@@ -12,7 +12,7 @@
 - [x] Fix account code ranges in pc_cc_mapper.py (4-digit to 5-digit)
 - [x] Fix control account codes in summarize_ledgers.py (4-digit to 5-digit)
 - [x] Create script to populate input files from reference files (2026-03-13)
-- [ ] Update USERGUIDE.md to cover all modules (1-7) - pending since 2026-02-23
+- [x] Update USERGUIDE.md to cover all modules (2026-03-14)
 - [ ] Fix batch_process_all_months.py to not overwrite input files
 
 ## Random thoughts

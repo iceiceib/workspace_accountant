@@ -126,6 +126,41 @@ python scripts/create_bank_statement.py data/Jan2026
 
 You only need to run these once. After that, the actual data for each month comes from your real `.xlsx` files placed in the appropriate folder.
 
+### Populating Input Files from Reference Data
+
+If you have existing General Ledger and General Journal files, you can automatically populate the input journals:
+
+```bash
+cd accountant-skill
+python scripts/create_input_files.py
+```
+
+**What it does:**
+- Reads `Exisitng Accounting Workflow _ reference files/Ledger Accounts/General_Ledger_edited.xlsx`
+- Reads `Exisitng Accounting Workflow _ reference files/Books of Prime Entry/General_Journal.xlsx`
+- Creates the following files in `data/input/journals/`:
+  - `cash_receipts_journal.xlsx` — Where Cash at Bank (10100) is DEBITED
+  - `cash_payments_journal.xlsx` — Where Cash at Bank (10100) is CREDITED
+  - `general_journal.xlsx` — Adjustment entries from the General Journal
+
+**Counterparty Matching Logic:**
+
+The script uses 4 matching patterns to identify counterparty accounts:
+
+| Pattern | Description |
+|---------|-------------|
+| Single counterparty | Immediate neighbor with exact matching amount |
+| Multiple counterparties | Grouped between cash entries, total amounts match |
+| Description-based | Monthly summaries matched by product keywords (e.g., "140ml") |
+| Amount-based fallback | Looks before/after cash entry for matching totals |
+
+**Expected Output:**
+```
+Cash Receipts: 207 entries, 1,732,445,359 MMK
+Cash Payments: 129 entries, 1,469,287,817 MMK
+General Journal: 176 adjustment entries
+```
+
 ---
 
 ## 4. Folder Structure
@@ -1697,6 +1732,9 @@ All modules are **idempotent** — running them again for the same period will o
 
 ```bash
 # From the accountant-skill/ directory:
+
+# INPUT FILES — Populate from Reference GL/GJ
+python scripts/create_input_files.py
 
 # MODULE 1 — Summarize Journals
 python scripts/summarize_journals.py \
