@@ -13,11 +13,19 @@
 - [x] Fix control account codes in summarize_ledgers.py (4-digit to 5-digit)
 - [x] Create script to populate input files from reference files (2026-03-13)
 - [x] Update USERGUIDE.md to cover all modules (2026-03-14)
-- [ ] Fix batch_process_all_months.py to not overwrite input files
+- [x] Fix batch_process_all_months.py to not overwrite input files (2026-03-15)
+- [x] Populate ledger files from reference General_Ledger_edited.xlsx (2026-03-15)
+- [x] Clean sample data from AR/AP ledgers (2026-03-15)
 
-## Random thoughts
-- Input files should remain as source data - processing scripts should only write to output files
-- The batch_process_all_months.py still has code that writes to data/input/ - needs cleanup
+## Completed This Session (2026-03-15)
+1. Fixed `batch_process_all_months.py` - removed unused `OUTPUT_INPUT` variable
+2. Populated `general_ledger.xlsx` with 758 transactions from reference file (Feb-Oct 2025)
+3. Derived `cash_ledger.xlsx` from GL with 242 transactions
+4. Cleaned AR/AP ledgers to empty templates (headers only)
+
+## Notes
+- Reference GL uses cash-based system (no AR/AP accounts - all sales/purchases through Cash 10100)
+- Inventory sub-ledgers (raw_materials, packaging) await separate data from user
 
 ## Links to check later
 -

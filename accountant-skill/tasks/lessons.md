@@ -156,3 +156,34 @@ M3 (Bank Recon) → M4 (Adjustments) → M5 (Adjusted TB)
 - Cash Payments: 129 entries, 1,469,287,817 MMK
 - General Journal: 176 adjustment entries
 - Difference from reference GL: 0.00 MMK (all transactions captured)
+
+## Ledger File Population (2026-03-15)
+
+### Populating general_ledger.xlsx from Reference
+- **Source:** `Exisitng Accounting Workflow _ reference files/Ledger Accounts/General_Ledger_edited.xlsx`
+- **Column mapping:**
+  - `COA Account Number` → `Account Code`
+  - `Descritpion` → `Description` (note: typo in source column name)
+  - `Debit (MMK)` → `Debit`
+  - `Credit (MMK)` → `Credit`
+  - `Account Balance (MMK)` → `Balance`
+- **Total transactions:** 758 (Feb 2025 - Oct 2025)
+- **Sort order:** By Date, then by Account Code
+
+### Deriving Cash Ledger from GL
+- Filter GL for Account Code 10100 (Cash at Bank)
+- Use `Branch` column from reference as `Bank Account` name
+- Use `Journal Vouchers Ref` column as `Reference`
+- Calculate running balance from Debit/Credit
+- Result: 242 cash transactions, final balance 257,918,170.90 MMK
+
+### Reference GL Structure
+- Uses cash-based accounting (no AR/AP accounts)
+- All sales recorded directly: Cash (10100) + Revenue (40000)
+- All purchases recorded directly: Cash (10100) + Expenses
+- This means AR/AP sub-ledgers cannot be derived from reference GL
+
+### File Lock Handling on Windows
+- **Issue:** Excel files locked when open in Excel cause `PermissionError`
+- **Solution:** Write to temp file (e.g., `filename_new.xlsx`), then replace after user closes Excel
+- **Commands:** `rm -f old.xlsx && mv new.xlsx old.xlsx`

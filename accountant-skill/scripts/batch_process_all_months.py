@@ -14,7 +14,6 @@ import sys
 
 # Paths
 SOURCE_DIR = Path('Exisitng Accounting Workflow _ reference files')
-OUTPUT_INPUT = Path('data/input')
 OUTPUT_OUTPUT = Path('data/output')
 MASTER_DIR = Path('data/input/master')
 
