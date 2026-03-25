@@ -57,19 +57,19 @@ def create_sales_journal(output_dir):
     style_headers(ws, headers)
     # PC01 = Soft Drink sales  |  PC02 = Drinking Water sales  |  PC99 = Shared/General
     rows = [
-        ('2026-01-02', 'SJ-001', 'Hla Min',   'Soft drink sales - Shop 1',      1100, 4010, 250000, 'PC01'),
-        ('2026-01-03', 'SJ-002', 'Kyaw Zin',  'Soft drink sales - Shop 1',      1100, 4010, 180000, 'PC01'),
-        ('2026-01-05', 'SJ-003', 'Win Htut',  'Drinking water order - Shop 2',  1100, 4020, 450000, 'PC02'),
-        ('2026-01-07', 'SJ-004', 'Thida Aye', 'Drinking water - Shop 3',        1100, 4030, 320000, 'PC02'),
-        ('2026-01-10', 'SJ-005', 'Mg Mg',     'Soft drink sales - Shop 1',      1100, 4010, 195000, 'PC01'),
-        ('2026-01-12', 'SJ-006', 'Su Su',     'Drinking water bulk - Shop 2',   1100, 4020, 600000, 'PC02'),
-        ('2026-01-15', 'SJ-007', 'Aye Aye',   'Drinking water - Shop 3',        1100, 4030, 280000, 'PC02'),
-        ('2026-01-17', 'SJ-008', 'Zaw Lin',   'Mixed event supply - General',   1100, 4040, 750000, 'PC99'),
-        ('2026-01-20', 'SJ-009', 'Nay Chi',   'Soft drink sales - Shop 1',      1100, 4010, 215000, 'PC01'),
-        ('2026-01-22', 'SJ-010', 'Tun Tun',   'Drinking water - Shop 2',        1100, 4020, 340000, 'PC02'),
-        ('2026-01-25', 'SJ-011', 'Khin Khin', 'Drinking water - Shop 3',        1100, 4030, 290000, 'PC02'),
-        ('2026-01-28', 'SJ-012', 'Aung Aung', 'Mixed supply - General',         1100, 4040, 480000, 'PC99'),
-        ('2026-01-30', 'SJ-013', 'Ye Naung',  'Soft drink sales - Shop 1',      1100, 4010, 175000, 'PC01'),
+        ('2026-01-02', 'SJ-001', 'Hla Min',   'Soft drink sales - Shop 1',      11000, 40000, 250000, 'PC01'),
+        ('2026-01-03', 'SJ-002', 'Kyaw Zin',  'Soft drink sales - Shop 1',      11000, 40000, 180000, 'PC01'),
+        ('2026-01-05', 'SJ-003', 'Win Htut',  'Drinking water order - Shop 2',  11000, 40000, 450000, 'PC02'),
+        ('2026-01-07', 'SJ-004', 'Thida Aye', 'Drinking water - Shop 3',        11000, 40000, 320000, 'PC02'),
+        ('2026-01-10', 'SJ-005', 'Mg Mg',     'Soft drink sales - Shop 1',      11000, 40000, 195000, 'PC01'),
+        ('2026-01-12', 'SJ-006', 'Su Su',     'Drinking water bulk - Shop 2',   11000, 40000, 600000, 'PC02'),
+        ('2026-01-15', 'SJ-007', 'Aye Aye',   'Drinking water - Shop 3',        11000, 40000, 280000, 'PC02'),
+        ('2026-01-17', 'SJ-008', 'Zaw Lin',   'Mixed event supply - General',   11000, 40000, 750000, 'PC99'),
+        ('2026-01-20', 'SJ-009', 'Nay Chi',   'Soft drink sales - Shop 1',      11000, 40000, 215000, 'PC01'),
+        ('2026-01-22', 'SJ-010', 'Tun Tun',   'Drinking water - Shop 2',        11000, 40000, 340000, 'PC02'),
+        ('2026-01-25', 'SJ-011', 'Khin Khin', 'Drinking water - Shop 3',        11000, 40000, 290000, 'PC02'),
+        ('2026-01-28', 'SJ-012', 'Aung Aung', 'Mixed supply - General',         11000, 40000, 480000, 'PC99'),
+        ('2026-01-30', 'SJ-013', 'Ye Naung',  'Soft drink sales - Shop 1',      11000, 40000, 175000, 'PC01'),
     ]
     add_rows(ws, rows)
     path = output_dir / 'sales_journal.xlsx'
@@ -86,17 +86,17 @@ def create_purchases_journal(output_dir):
                'Debit Account', 'Credit Account', 'Amount', 'Profit Center', 'Cost Center']
     style_headers(ws, headers)
     rows = [
-        ('2026-01-03', 'PJ-001', 'Golden Harvest', 'Sugar & flavour — SD production', 5010, 2010, 320000, 'PC01', 'CC101'),
-        ('2026-01-05', 'PJ-002', 'Fresh Market Co', 'Mineral salts — DW production',  5010, 2010, 185000, 'PC02', 'CC102'),
-        ('2026-01-08', 'PJ-003', 'Pack & Go Ltd',   'PET bottles — SD filling',       5020, 2010,  95000, 'PC01', 'CC105'),
-        ('2026-01-10', 'PJ-004', 'Golden Harvest',  'CO2 gas — SD production',        5010, 2010, 145000, 'PC01', 'CC101'),
-        ('2026-01-13', 'PJ-005', 'Fresh Market Co', 'Filter media — water treatment', 5010, 2010, 265000, 'PC02', 'CC103'),
-        ('2026-01-15', 'PJ-006', 'Pack & Go Ltd',   'Cups & lids — DW filling',       5020, 2010,  72000, 'PC02', 'CC105'),
-        ('2026-01-18', 'PJ-007', 'Supply Hub',      'Preform blanks — SD line',       5010, 2010, 198000, 'PC01', 'CC104'),
-        ('2026-01-20', 'PJ-008', 'Fresh Market Co', 'Purification chemicals — DW',    5010, 2010, 223000, 'PC02', 'CC103'),
-        ('2026-01-23', 'PJ-009', 'Golden Harvest',  'Concentrate — SD production',    5010, 2010, 310000, 'PC01', 'CC101'),
-        ('2026-01-27', 'PJ-010', 'Pack & Go Ltd',   'Shrink wrap — shared packaging', 5020, 2010,  58000, 'PC99', 'CC105'),
-        ('2026-01-29', 'PJ-011', 'Supply Hub',      'Factory cleaning supplies',       5420, 2010,  45000, 'PC99', 'CC202'),
+        ('2026-01-03', 'PJ-001', 'Golden Harvest', 'Sugar & flavour — SD production', 50010, 20000, 320000, 'PC01', 'CC101'),
+        ('2026-01-05', 'PJ-002', 'Fresh Market Co', 'Mineral salts — DW production',  50010, 20000, 185000, 'PC02', 'CC102'),
+        ('2026-01-08', 'PJ-003', 'Pack & Go Ltd',   'PET bottles — SD filling',       50110, 20000,  95000, 'PC01', 'CC105'),
+        ('2026-01-10', 'PJ-004', 'Golden Harvest',  'CO2 gas — SD production',        50010, 20000, 145000, 'PC01', 'CC101'),
+        ('2026-01-13', 'PJ-005', 'Fresh Market Co', 'Filter media — water treatment', 50010, 20000, 265000, 'PC02', 'CC103'),
+        ('2026-01-15', 'PJ-006', 'Pack & Go Ltd',   'Cups & lids — DW filling',       50110, 20000,  72000, 'PC02', 'CC105'),
+        ('2026-01-18', 'PJ-007', 'Supply Hub',      'Preform blanks — SD line',       50010, 20000, 198000, 'PC01', 'CC104'),
+        ('2026-01-20', 'PJ-008', 'Fresh Market Co', 'Purification chemicals — DW',    50010, 20000, 223000, 'PC02', 'CC103'),
+        ('2026-01-23', 'PJ-009', 'Golden Harvest',  'Concentrate — SD production',    50010, 20000, 310000, 'PC01', 'CC101'),
+        ('2026-01-27', 'PJ-010', 'Pack & Go Ltd',   'Shrink wrap — shared packaging', 50110, 20000,  58000, 'PC99', 'CC105'),
+        ('2026-01-29', 'PJ-011', 'Supply Hub',      'Factory cleaning supplies',       65000, 20000,  45000, 'PC99', 'CC202'),
     ]
     add_rows(ws, rows)
     path = output_dir / 'purchases_journal.xlsx'
@@ -114,19 +114,19 @@ def create_cash_receipts_journal(output_dir):
     style_headers(ws, headers)
     # AR collections inherit the PC of the original sale; cash sales get their own PC
     rows = [
-        ('2026-01-02', 'CRJ-001', 'Cash Sales',  'Cash SD sales - Shop 1',       1020, 4010, 380000, 'Main Account', 'PC01'),
-        ('2026-01-03', 'CRJ-002', 'Cash Sales',  'Cash DW sales - Shop 2',       1020, 4020, 290000, 'Main Account', 'PC02'),
-        ('2026-01-05', 'CRJ-003', 'Hla Min',     'AR receipt - SJ-001 (SD)',     1020, 1100, 250000, 'Main Account', 'PC01'),
-        ('2026-01-07', 'CRJ-004', 'Cash Sales',  'Cash DW sales - Shop 3',       1020, 4030, 420000, 'Main Account', 'PC02'),
-        ('2026-01-10', 'CRJ-005', 'Kyaw Zin',    'AR receipt - SJ-002 (SD)',     1020, 1100, 180000, 'Main Account', 'PC01'),
-        ('2026-01-12', 'CRJ-006', 'Cash Sales',  'Cash mixed sales - all shops', 1020, 4040, 550000, 'Main Account', 'PC99'),
-        ('2026-01-14', 'CRJ-007', 'Win Htut',    'AR receipt - SJ-003 (DW)',     1020, 1100, 450000, 'Main Account', 'PC02'),
-        ('2026-01-17', 'CRJ-008', 'Cash Sales',  'Cash SD sales - Shop 1',       1020, 4010, 315000, 'Main Account', 'PC01'),
-        ('2026-01-20', 'CRJ-009', 'Thida Aye',   'AR receipt - SJ-004 (DW)',     1020, 1100, 320000, 'Main Account', 'PC02'),
-        ('2026-01-22', 'CRJ-010', 'Cash Sales',  'Cash DW sales - Shop 2',       1020, 4020, 410000, 'Main Account', 'PC02'),
-        ('2026-01-25', 'CRJ-011', 'Zaw Lin',     'AR receipt - SJ-008 (mixed)',  1020, 1100, 750000, 'Main Account', 'PC99'),
-        ('2026-01-28', 'CRJ-012', 'Cash Sales',  'Cash mixed sales - all shops', 1020, 4040, 625000, 'Main Account', 'PC99'),
-        ('2026-01-30', 'CRJ-013', 'Owner',       'Capital introduced by owner',  1020, 3010, 500000, 'Main Account', 'PC99'),
+        ('2026-01-02', 'CRJ-001', 'Cash Sales',  'Cash SD sales - Shop 1',       10100, 40000, 380000, 'Main Account', 'PC01'),
+        ('2026-01-03', 'CRJ-002', 'Cash Sales',  'Cash DW sales - Shop 2',       10100, 40000, 290000, 'Main Account', 'PC02'),
+        ('2026-01-05', 'CRJ-003', 'Hla Min',     'AR receipt - SJ-001 (SD)',     10100, 11000, 250000, 'Main Account', 'PC01'),
+        ('2026-01-07', 'CRJ-004', 'Cash Sales',  'Cash DW sales - Shop 3',       10100, 40000, 420000, 'Main Account', 'PC02'),
+        ('2026-01-10', 'CRJ-005', 'Kyaw Zin',    'AR receipt - SJ-002 (SD)',     10100, 11000, 180000, 'Main Account', 'PC01'),
+        ('2026-01-12', 'CRJ-006', 'Cash Sales',  'Cash mixed sales - all shops', 10100, 40000, 550000, 'Main Account', 'PC99'),
+        ('2026-01-14', 'CRJ-007', 'Win Htut',    'AR receipt - SJ-003 (DW)',     10100, 11000, 450000, 'Main Account', 'PC02'),
+        ('2026-01-17', 'CRJ-008', 'Cash Sales',  'Cash SD sales - Shop 1',       10100, 40000, 315000, 'Main Account', 'PC01'),
+        ('2026-01-20', 'CRJ-009', 'Thida Aye',   'AR receipt - SJ-004 (DW)',     10100, 11000, 320000, 'Main Account', 'PC02'),
+        ('2026-01-22', 'CRJ-010', 'Cash Sales',  'Cash DW sales - Shop 2',       10100, 40000, 410000, 'Main Account', 'PC02'),
+        ('2026-01-25', 'CRJ-011', 'Zaw Lin',     'AR receipt - SJ-008 (mixed)',  10100, 11000, 750000, 'Main Account', 'PC99'),
+        ('2026-01-28', 'CRJ-012', 'Cash Sales',  'Cash mixed sales - all shops', 10100, 40000, 625000, 'Main Account', 'PC99'),
+        ('2026-01-30', 'CRJ-013', 'Owner',       'Capital introduced by owner',  10100, 3010, 500000, 'Main Account', 'PC99'),
     ]
     add_rows(ws, rows)
     path = output_dir / 'cash_receipts_journal.xlsx'
@@ -145,33 +145,33 @@ def create_cash_payments_journal(output_dir):
     style_headers(ws, headers)
     rows = [
         # AP payments — balance sheet entries, no CC required but tag PC for traceability
-        ('2026-01-05', 'CPJ-001', 'Golden Harvest',  'Pay PJ-001 sugar/flavour',    2010, 1020, 320000, 'Main Account', 'PC01', ''),
+        ('2026-01-05', 'CPJ-001', 'Golden Harvest',  'Pay PJ-001 sugar/flavour',    20000, 10100, 320000, 'Main Account', 'PC01', ''),
         # Rent — shared factory cost
-        ('2026-01-06', 'CPJ-002', 'City Landlord',   'Factory rent - Block A',      5200, 1020, 450000, 'Main Account', 'PC99', 'CC201'),
-        ('2026-01-07', 'CPJ-003', 'City Landlord',   'Factory rent - Block B',      5200, 1020, 380000, 'Main Account', 'PC99', 'CC201'),
-        ('2026-01-08', 'CPJ-004', 'City Landlord',   'Warehouse rent',              5200, 1020, 350000, 'Main Account', 'PC99', 'CC302'),
+        ('2026-01-06', 'CPJ-002', 'City Landlord',   'Factory rent - Block A',      68000, 10100, 450000, 'Main Account', 'PC99', 'CC201'),
+        ('2026-01-07', 'CPJ-003', 'City Landlord',   'Factory rent - Block B',      68000, 10100, 380000, 'Main Account', 'PC99', 'CC201'),
+        ('2026-01-08', 'CPJ-004', 'City Landlord',   'Warehouse rent',              68000, 10100, 350000, 'Main Account', 'PC99', 'CC302'),
         # Utilities
-        ('2026-01-10', 'CPJ-005', 'YESC',            'Factory electricity - Jan',   5210, 1020, 125000, 'Main Account', 'PC99', 'CC201'),
+        ('2026-01-10', 'CPJ-005', 'YESC',            'Factory electricity - Jan',   63000, 10100, 125000, 'Main Account', 'PC99', 'CC201'),
         # AP payment
-        ('2026-01-10', 'CPJ-006', 'Fresh Market Co', 'Pay PJ-002 mineral salts',    2010, 1020, 185000, 'Main Account', 'PC02', ''),
+        ('2026-01-10', 'CPJ-006', 'Fresh Market Co', 'Pay PJ-002 mineral salts',    20000, 10100, 185000, 'Main Account', 'PC02', ''),
         # Admin
-        ('2026-01-12', 'CPJ-007', 'MPT',             'Office internet & phone',     5220, 1020,  55000, 'Main Account', 'PC99', 'CC302'),
+        ('2026-01-12', 'CPJ-007', 'MPT',             'Office internet & phone',     68000, 10100,  55000, 'Main Account', 'PC99', 'CC302'),
         # AP payment
-        ('2026-01-15', 'CPJ-008', 'Pack & Go Ltd',   'Pay PJ-003 PET bottles',      2010, 1020,  95000, 'Main Account', 'PC01', ''),
+        ('2026-01-15', 'CPJ-008', 'Pack & Go Ltd',   'Pay PJ-003 PET bottles',      20000, 10100,  95000, 'Main Account', 'PC01', ''),
         # Delivery
-        ('2026-01-15', 'CPJ-009', 'Transport Co',    'Product delivery - Jan',      5500, 1020,  85000, 'Main Account', 'PC99', 'CC301'),
+        ('2026-01-15', 'CPJ-009', 'Transport Co',    'Product delivery - Jan',      64000, 10100,  85000, 'Main Account', 'PC99', 'CC301'),
         # Petty cash (balance sheet — no CC)
-        ('2026-01-18', 'CPJ-010', 'Petty Cash',      'Petty cash top-up',           1030, 1020, 100000, 'Main Account', 'PC99', ''),
+        ('2026-01-18', 'CPJ-010', 'Petty Cash',      'Petty cash top-up',           10000, 10100, 100000, 'Main Account', 'PC99', ''),
         # AP payment
-        ('2026-01-20', 'CPJ-011', 'Supply Hub',      'Pay PJ-007 preform blanks',   2010, 1020, 198000, 'Main Account', 'PC01', ''),
+        ('2026-01-20', 'CPJ-011', 'Supply Hub',      'Pay PJ-007 preform blanks',   20000, 10100, 198000, 'Main Account', 'PC01', ''),
         # Insurance
-        ('2026-01-22', 'CPJ-012', 'Star Insurance',  'Factory insurance premium',   5700, 1020,  65000, 'Main Account', 'PC99', 'CC302'),
+        ('2026-01-22', 'CPJ-012', 'Star Insurance',  'Factory insurance premium',   5700, 10100,  65000, 'Main Account', 'PC99', 'CC302'),
         # Maintenance
-        ('2026-01-25', 'CPJ-013', 'Repair Services', 'Production line maintenance', 5400, 1020,  95000, 'Main Account', 'PC99', 'CC202'),
+        ('2026-01-25', 'CPJ-013', 'Repair Services', 'Production line maintenance', 53100, 10100,  95000, 'Main Account', 'PC99', 'CC202'),
         # Marketing
-        ('2026-01-28', 'CPJ-014', 'Marketing Agency','Brand & distribution - Jan',  5600, 1020, 120000, 'Main Account', 'PC99', 'CC301'),
+        ('2026-01-28', 'CPJ-014', 'Marketing Agency','Brand & distribution - Jan',  60000, 10100, 120000, 'Main Account', 'PC99', 'CC301'),
         # Owner drawings (equity — no CC)
-        ('2026-01-30', 'CPJ-015', 'Owner',           'Owner drawings - January',    3020, 1020, 200000, 'Main Account', 'PC99', ''),
+        ('2026-01-30', 'CPJ-015', 'Owner',           'Owner drawings - January',    3020, 10100, 200000, 'Main Account', 'PC99', ''),
     ]
     add_rows(ws, rows)
     path = output_dir / 'cash_payments_journal.xlsx'
@@ -190,14 +190,14 @@ def create_payroll_journal(output_dir):
     style_headers(ws, headers)
     rows = [
         # Production staff — tagged to their lines
-        ('2026-01-31', 'SD Production Team',  'Jan salary - SD production (5 staff)',  5100, 1020, 750000,  750000,  'PC01', 'CC101'),
-        ('2026-01-31', 'DW Production Team',  'Jan salary - DW production (4 staff)',  5100, 1020, 960000,  960000,  'PC02', 'CC102'),
+        ('2026-01-31', 'SD Production Team',  'Jan salary - SD production (5 staff)',  53000, 10100, 750000,  750000,  'PC01', 'CC101'),
+        ('2026-01-31', 'DW Production Team',  'Jan salary - DW production (4 staff)',  53000, 10100, 960000,  960000,  'PC02', 'CC102'),
         # Shared staff
-        ('2026-01-31', 'Management',          'Jan salary - management (2 staff)',      5100, 1020, 600000,  600000,  'PC99', 'CC302'),
-        ('2026-01-31', 'Sales & Delivery',    'Jan salary - sales/delivery (3 staff)', 5100, 1020, 360000,  360000,  'PC99', 'CC301'),
+        ('2026-01-31', 'Management',          'Jan salary - management (2 staff)',      53000, 10100, 600000,  600000,  'PC99', 'CC302'),
+        ('2026-01-31', 'Sales & Delivery',    'Jan salary - sales/delivery (3 staff)', 53000, 10100, 360000,  360000,  'PC99', 'CC301'),
         # Accruals
-        ('2026-01-31', 'SD Production Team',  'Jan overtime accrual - SD line',        5100, 2030,  85000,   85000,  'PC01', 'CC101'),
-        ('2026-01-31', 'All Staff',           'Jan employee benefits accrual',         5110, 2030, 120000,  120000,  'PC99', 'CC302'),
+        ('2026-01-31', 'SD Production Team',  'Jan overtime accrual - SD line',        53000, 2030,  85000,   85000,  'PC01', 'CC101'),
+        ('2026-01-31', 'All Staff',           'Jan employee benefits accrual',         62000, 2030, 120000,  120000,  'PC99', 'CC302'),
     ]
     add_rows(ws, rows)
     path = output_dir / 'payroll_journal.xlsx'
@@ -215,10 +215,10 @@ def create_general_journal(output_dir):
                'Profit Center', 'Cost Center']
     style_headers(ws, headers)
     rows = [
-        ('2026-01-31', 'GJ-001', 'Transfer raw materials to COGS - SD Jan usage',  5010, 1200, 450000, 450000, 'PC01', 'CC101'),
+        ('2026-01-31', 'GJ-001', 'Transfer raw materials to COGS - SD Jan usage',  50010, 1200, 450000, 450000, 'PC01', 'CC101'),
         ('2026-01-31', 'GJ-002', 'Prepaid insurance recognized - Jan portion',      5700, 1320,  20000,  20000, 'PC99', 'CC302'),
-        ('2026-01-31', 'GJ-003', 'Write off uncollectible AR - old customer',       1110, 1100,  15000,  15000, 'PC99', ''),
-        ('2026-01-31', 'GJ-004', 'Bank service charges - Jan 2026',                 5920, 1020,   8500,   8500, 'PC99', 'CC302'),
+        ('2026-01-31', 'GJ-003', 'Write off uncollectible AR - old customer',       1110, 11000,  15000,  15000, 'PC99', ''),
+        ('2026-01-31', 'GJ-004', 'Bank service charges - Jan 2026',                 5920, 10100,   8500,   8500, 'PC99', 'CC302'),
         ('2026-01-31', 'GJ-005', 'Correction: reclassify office supplies',          5410, 5900,  12000,  12000, 'PC99', 'CC302'),
     ]
     add_rows(ws, rows)
