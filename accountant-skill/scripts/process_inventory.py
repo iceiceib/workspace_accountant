@@ -6,19 +6,22 @@ This script processes inventory movements from purchases and production usage,
 calculates Weighted Average Cost (WAC), and generates inventory reports.
 
 Usage:
-    python scripts/process_inventory.py LEDGERS_DIR OUTPUT_DIR PERIOD_START PERIOD_END
+    python scripts/process_inventory.py DATA_DIR OUTPUT_DIR PERIOD_START PERIOD_END
 
 Example:
-    python scripts/process_inventory.py data/input/ledgers data/output/Jan2026 2026-01-01 2026-01-31
+    python scripts/process_inventory.py data/input data/output/Jan2026 2026-01-01 2026-01-31
 
-Input files:
-    - raw_materials_ledger.xlsx (in ledgers_dir)
-    - packaging_ledger.xlsx (in ledgers_dir)
+Input files (in data_dir):
+    - inventory_items.xlsx
+    - raw_materials_ledger.xlsx
+    - packaging_ledger.xlsx
+    - purchases_journal.xlsx
+    - production_usage.xlsx (optional)
 
-Output files:
-    - raw_materials_ledger.xlsx (updated, in ledgers_dir)
-    - packaging_ledger.xlsx (updated, in ledgers_dir)
-    - inventory_summary_[PERIOD].xlsx (in output_dir)
+Output files (in output_dir):
+    - inventory_summary_[PERIOD].xlsx
+    - raw_materials_ledger.xlsx (copy with updated transactions)
+    - packaging_ledger.xlsx (copy with updated transactions)
 """
 
 import sys
@@ -26,7 +29,6 @@ import os
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
-import math
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -48,6 +50,36 @@ from openpyxl.styles import Font, PatternFill, Alignment
 # Tab colors
 TAB_DASHBOARD = '00B050'  # Green
 TAB_DETAIL = '4472C4'     # Blue
+
+# Column mapping for inventory ledger sheets
+LEDGER_COLUMNS = {
+    'date': 1,
+    'reference': 2,
+    'description': 3,
+    'received_qty': 4,
+    'issued_qty': 5,
+    'balance_qty': 6,
+    'unit_cost': 7,
+    'received_value': 8,
+    'issued_value': 9,
+    'balance_value': 10
+}
+
+# Column mapping for dashboard
+DASHBOARD_COLUMNS = {
+    'item_code': 1,
+    'item_name': 2,
+    'unit': 3,
+    'opening_qty': 4,
+    'opening_value': 5,
+    'received_qty': 6,
+    'received_value': 7,
+    'issued_qty': 8,
+    'issued_value': 9,
+    'closing_qty': 10,
+    'closing_value': 11,
+    'wac': 12
+}
 
 
 def read_inventory_ledger(filepath, item_code):
@@ -128,7 +160,9 @@ def read_inventory_ledger(filepath, item_code):
         # Read transactions
         for i in range(header_row + 2, len(df)):  # Skip opening row
             row = df.iloc[i]
-            if all(pd.isna(v) for v in row if isinstance(v, (int, float)) or pd.notna(v)):
+
+            # Skip completely empty rows (all values are NaN)
+            if row.isna().all():
                 continue
 
             txn = {}
@@ -322,22 +356,79 @@ def process_inventory_item(ledger, purchases, usage, item_code, item_name, unit)
     return ledger
 
 
-def update_inventory_ledger_file(filepath, items_data):
+def process_item_category(inv_mapper, category, ledger_file, purchases, usage):
     """
-    Update an inventory ledger file with processed data.
+    Process all items in a category (raw materials or packaging).
 
     Args:
-        filepath: Path to the ledger xlsx file
+        inv_mapper: InventoryMapper instance
+        category: 'raw_materials' or 'packaging'
+        ledger_file: Path to the category ledger file
+        purchases: Dict of purchases by item code
+        usage: Dict of usage by item code
+
+    Returns:
+        List of item summary dicts
+    """
+    items = []
+
+    # Get items based on category
+    if category == 'raw_materials':
+        category_items = inv_mapper.get_raw_materials()
+    else:
+        category_items = inv_mapper.get_packaging()
+
+    for item in category_items:
+        code = item['code']
+
+        # Read existing ledger data
+        ledger_data = read_inventory_ledger(ledger_file, code)
+
+        # Create ledger object
+        ledger = InventoryLedger(
+            item_code=code,
+            item_name=item['name'],
+            unit=item['unit'],
+            opening_qty=ledger_data['opening_qty'],
+            opening_value=ledger_data['opening_value']
+        )
+
+        # Process transactions
+        item_purchases = purchases.get(code, [])
+        item_usage = usage.get(code, [])
+        ledger = process_inventory_item(ledger, item_purchases, item_usage, code, item['name'], item['unit'])
+
+        # Get summary
+        summary = ledger.get_period_summary()
+        summary['transactions'] = [t for t in ledger.transactions]
+        items.append(summary)
+
+    return items
+
+
+def update_inventory_ledger_file(input_path, output_path, items_data):
+    """
+    Copy and update an inventory ledger file with processed data.
+
+    Args:
+        input_path: Path to the source ledger xlsx file
+        output_path: Path to save the updated ledger file
         items_data: List of dicts with item summary and transactions
     """
     from openpyxl import load_workbook
+    import shutil
 
-    if not Path(filepath).exists():
-        print(f"Warning: Ledger file not found: {filepath}")
+    if not Path(input_path).exists():
+        print(f"Warning: Ledger file not found: {input_path}")
         return
 
     try:
-        wb = load_workbook(filepath)
+        # Copy input file to output location (don't modify inputs)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(input_path, output_path)
+
+        wb = load_workbook(output_path)
 
         for item in items_data:
             sheet_name = str(item.get('item_code', item.get('code', '')))
@@ -357,23 +448,25 @@ def update_inventory_ledger_file(filepath, items_data):
             if data_row is None:
                 continue
 
-            # Write transactions
+            # Write transactions using column mapping
+            cols = LEDGER_COLUMNS
             for txn in item.get('transactions', []):
-                ws.cell(row=data_row, column=1, value=txn.get('date', ''))
-                ws.cell(row=data_row, column=2, value=txn.get('reference', ''))
-                ws.cell(row=data_row, column=3, value=txn.get('description', ''))
-                ws.cell(row=data_row, column=4, value=txn.get('received_qty', ''))
-                ws.cell(row=data_row, column=5, value=txn.get('issued_qty', ''))
-                ws.cell(row=data_row, column=6, value=txn.get('balance_qty', ''))
-                ws.cell(row=data_row, column=7, value=txn.get('unit_cost', ''))
-                ws.cell(row=data_row, column=8, value=txn.get('received_value', ''))
-                ws.cell(row=data_row, column=9, value=txn.get('issued_value', ''))
-                ws.cell(row=data_row, column=10, value=txn.get('balance_value', ''))
+                ws.cell(row=data_row, column=cols['date'], value=txn.get('date', ''))
+                ws.cell(row=data_row, column=cols['reference'], value=txn.get('reference', ''))
+                ws.cell(row=data_row, column=cols['description'], value=txn.get('description', ''))
+                ws.cell(row=data_row, column=cols['received_qty'], value=txn.get('received_qty', ''))
+                ws.cell(row=data_row, column=cols['issued_qty'], value=txn.get('issued_qty', ''))
+                ws.cell(row=data_row, column=cols['balance_qty'], value=txn.get('balance_qty', ''))
+                ws.cell(row=data_row, column=cols['unit_cost'], value=txn.get('unit_cost', ''))
+                ws.cell(row=data_row, column=cols['received_value'], value=txn.get('received_value', ''))
+                ws.cell(row=data_row, column=cols['issued_value'], value=txn.get('issued_value', ''))
+                ws.cell(row=data_row, column=cols['balance_value'], value=txn.get('balance_value', ''))
                 data_row += 1
 
         # Update Dashboard
         if 'Dashboard' in wb.sheetnames:
             ws = wb['Dashboard']
+            cols = DASHBOARD_COLUMNS
 
             # Find the data start row
             data_row = None
@@ -385,22 +478,22 @@ def update_inventory_ledger_file(filepath, items_data):
 
             if data_row:
                 for item in items_data:
-                    ws.cell(row=data_row, column=4, value=item.get('opening_qty', 0))
-                    ws.cell(row=data_row, column=5, value=item.get('opening_value', 0))
-                    ws.cell(row=data_row, column=6, value=item.get('received_qty', 0))
-                    ws.cell(row=data_row, column=7, value=item.get('received_value', 0))
-                    ws.cell(row=data_row, column=8, value=item.get('issued_qty', 0))
-                    ws.cell(row=data_row, column=9, value=item.get('issued_value', 0))
-                    ws.cell(row=data_row, column=10, value=item.get('closing_qty', 0))
-                    ws.cell(row=data_row, column=11, value=item.get('closing_value', 0))
-                    ws.cell(row=data_row, column=12, value=item.get('wac', 0))
+                    ws.cell(row=data_row, column=cols['opening_qty'], value=item.get('opening_qty', 0))
+                    ws.cell(row=data_row, column=cols['opening_value'], value=item.get('opening_value', 0))
+                    ws.cell(row=data_row, column=cols['received_qty'], value=item.get('received_qty', 0))
+                    ws.cell(row=data_row, column=cols['received_value'], value=item.get('received_value', 0))
+                    ws.cell(row=data_row, column=cols['issued_qty'], value=item.get('issued_qty', 0))
+                    ws.cell(row=data_row, column=cols['issued_value'], value=item.get('issued_value', 0))
+                    ws.cell(row=data_row, column=cols['closing_qty'], value=item.get('closing_qty', 0))
+                    ws.cell(row=data_row, column=cols['closing_value'], value=item.get('closing_value', 0))
+                    ws.cell(row=data_row, column=cols['wac'], value=item.get('wac', 0))
                     data_row += 1
 
-        wb.save(filepath)
-        print(f"Updated: {filepath}")
+        wb.save(output_path)
+        print(f"Created: {output_path}")
 
     except Exception as e:
-        print(f"Error updating ledger {filepath}: {e}")
+        print(f"Error updating ledger {output_path}: {e}")
 
 
 def create_inventory_summary(output_path, period_start, period_end, rm_items, pkg_items):
@@ -521,20 +614,25 @@ def create_inventory_summary(output_path, period_start, period_end, rm_items, pk
 
 def main():
     """Main entry point."""
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 5:
         print(__doc__)
-        print("\nUsage: python scripts/process_inventory.py DATA_DIR PERIOD_START PERIOD_END")
+        print("\nUsage: python scripts/process_inventory.py DATA_DIR OUTPUT_DIR PERIOD_START PERIOD_END")
         print("\nExample:")
-        print("  python scripts/process_inventory.py data/Jan2026 2026-01-01 2026-01-31")
+        print("  python scripts/process_inventory.py data/input data/output/Jan2026 2026-01-01 2026-01-31")
         sys.exit(1)
 
     data_dir = Path(sys.argv[1])
-    period_start = sys.argv[2]
-    period_end = sys.argv[3]
+    output_dir = Path(sys.argv[2])
+    period_start = sys.argv[3]
+    period_end = sys.argv[4]
 
     print(f"Processing inventory for period {period_start} to {period_end}")
     print(f"Data directory: {data_dir}")
+    print(f"Output directory: {output_dir}")
     print()
+
+    # Ensure output directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize inventory mapper
     items_file = data_dir / 'inventory_items.xlsx'
@@ -558,78 +656,26 @@ def main():
 
     # Process raw materials
     print("\nProcessing raw materials...")
-    rm_items = []
     rm_ledger_file = data_dir / 'raw_materials_ledger.xlsx'
-
-    for item in inv_mapper.get_raw_materials():
-        code = item['code']
-
-        # Read existing ledger data
-        ledger_data = read_inventory_ledger(rm_ledger_file, code)
-
-        # Create ledger object
-        ledger = InventoryLedger(
-            item_code=code,
-            item_name=item['name'],
-            unit=item['unit'],
-            opening_qty=ledger_data['opening_qty'],
-            opening_value=ledger_data['opening_value']
-        )
-
-        # Process transactions
-        item_purchases = purchases.get(code, [])
-        item_usage = usage.get(code, [])
-        ledger = process_inventory_item(ledger, item_purchases, item_usage, code, item['name'], item['unit'])
-
-        # Get summary
-        summary = ledger.get_period_summary()
-        summary['transactions'] = [t for t in ledger.transactions]
-        rm_items.append(summary)
-
+    rm_items = process_item_category(inv_mapper, 'raw_materials', rm_ledger_file, purchases, usage)
     print(f"  Processed {len(rm_items)} raw material items")
 
     # Process packaging
     print("\nProcessing packaging materials...")
-    pkg_items = []
     pkg_ledger_file = data_dir / 'packaging_ledger.xlsx'
-
-    for item in inv_mapper.get_packaging():
-        code = item['code']
-
-        # Read existing ledger data
-        ledger_data = read_inventory_ledger(pkg_ledger_file, code)
-
-        # Create ledger object
-        ledger = InventoryLedger(
-            item_code=code,
-            item_name=item['name'],
-            unit=item['unit'],
-            opening_qty=ledger_data['opening_qty'],
-            opening_value=ledger_data['opening_value']
-        )
-
-        # Process transactions
-        item_purchases = purchases.get(code, [])
-        item_usage = usage.get(code, [])
-        ledger = process_inventory_item(ledger, item_purchases, item_usage, code, item['name'], item['unit'])
-
-        # Get summary
-        summary = ledger.get_period_summary()
-        summary['transactions'] = [t for t in ledger.transactions]
-        pkg_items.append(summary)
-
+    pkg_items = process_item_category(inv_mapper, 'packaging', pkg_ledger_file, purchases, usage)
     print(f"  Processed {len(pkg_items)} packaging items")
 
-    # Update ledger files
-    print("\nUpdating ledger files...")
+    # Write output ledger files (don't modify inputs)
+    print("\nWriting output ledger files...")
     if rm_ledger_file.exists():
-        update_inventory_ledger_file(rm_ledger_file, rm_items)
+        update_inventory_ledger_file(rm_ledger_file, output_dir / 'raw_materials_ledger.xlsx', rm_items)
     if pkg_ledger_file.exists():
-        update_inventory_ledger_file(pkg_ledger_file, pkg_items)
+        update_inventory_ledger_file(pkg_ledger_file, output_dir / 'packaging_ledger.xlsx', pkg_items)
 
     # Create inventory summary
     period_name = period_end[:7].replace('-', '')  # e.g., "202601"
-    summary_file = data_dir / f'inventory_summary_{period_name}.xlsx'
+    summary_file = output_dir / f'inventory_summary_{period_name}.xlsx'
     create_inventory_summary(summary_file, period_start, period_end, rm_items, pkg_items)
 
     print()

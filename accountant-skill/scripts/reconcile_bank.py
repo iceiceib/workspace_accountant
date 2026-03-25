@@ -30,9 +30,11 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 import pandas as pd
 import numpy as np
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 # Add scripts directory to path so utils can be found
 sys.path.insert(0, str(Path(__file__).parent))
@@ -45,7 +47,6 @@ from utils.excel_writer import (
     THIN_BORDER, PASS_FILL, FAIL_FILL, WARNING_FILL,
     NUMBER_FORMAT_NEG, DATE_FORMAT, HEADER_FILL, HEADER_FONT
 )
-from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 
 
@@ -64,12 +65,22 @@ OTHER_INCOME_CODE = '70000'   # Interest Income (catch-all for miscellaneous)
 
 DATE_PROXIMITY_DAYS = 3       # Max days apart for amount-only match
 
+# Tab colors
+TAB_GREEN = '00B050'          # Dashboard
+TAB_BLUE = '4472C4'           # Detail sheets
+TAB_ORANGE = '70AD47'         # PC/CC
+TAB_RED = 'FF0000'            # Exceptions
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. DATA LOADING
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_cash_ledger(data_dir, period_start, period_end):
+def load_cash_ledger(
+    data_dir: str,
+    period_start: str,
+    period_end: str
+) -> tuple[Optional[pd.DataFrame], float, float, Optional[str]]:
     """
     Load cash_ledger.xlsx, extract opening balance, and filter period rows.
     Cash ledger perspective: Debit = money IN, Credit = money OUT.
@@ -112,7 +123,11 @@ def load_cash_ledger(data_dir, period_start, period_end):
     return period_df, opening_balance, closing_balance, None
 
 
-def load_bank_statement(data_dir, period_start, period_end):
+def load_bank_statement(
+    data_dir: str,
+    period_start: str,
+    period_end: str
+) -> tuple[Optional[pd.DataFrame], float, float, Optional[str]]:
     """
     Load bank_statement.xlsx, extract opening balance, and filter period rows.
     Bank statement perspective: Debit = withdrawal (OUT), Credit = deposit (IN).
@@ -159,14 +174,17 @@ def load_bank_statement(data_dir, period_start, period_end):
 # 2. MATCHING
 # ─────────────────────────────────────────────────────────────────────────────
 
-def match_transactions(book_df, bank_df):
+def match_transactions(
+    book_df: pd.DataFrame,
+    bank_df: pd.DataFrame
+) -> tuple[list[dict], pd.DataFrame, pd.DataFrame]:
     """
     Match book (cash ledger) rows against bank statement rows.
 
     Both sides have been normalized so _amount > 0 = money in, < 0 = money out.
 
     Matching passes (in priority order):
-      Pass 1 — Exact:    same Reference AND same _amount
+      Pass 1 — Exact:    same Reference AND same _amount (O(n) using hash map)
       Pass 2 — Probable: same _amount, dates within DATE_PROXIMITY_DAYS
 
     Returns:
@@ -181,42 +199,60 @@ def match_transactions(book_df, bank_df):
     book_refs = book_df['Reference'].str.upper()
     bank_refs = bank_df['Reference'].str.upper()
 
-    # Pass 1: Exact reference + exact amount
+    # Pass 1: Exact reference + exact amount (O(n) using hash map)
+    # Build lookup: (ref, amount) -> list of bank indices
+    bank_lookup: dict[tuple[str, float], list[int]] = {}
+    for si in bank_df.index:
+        key = (bank_refs[si], round(bank_df.at[si, '_amount'], 2))
+        if key not in bank_lookup:
+            bank_lookup[key] = []
+        bank_lookup[key].append(si)
+
+    # Match book entries against lookup
     for bi in book_df.index:
         b_ref = book_refs[bi]
         b_amt = round(book_df.at[bi, '_amount'], 2)
-        for si in bank_df.index:
-            if si in bank_matched:
-                continue
-            s_ref = bank_refs[si]
-            s_amt = round(bank_df.at[si, '_amount'], 2)
-            if b_ref == s_ref and b_amt == s_amt:
-                matched_pairs.append({'book_idx': bi, 'bank_idx': si, 'match_type': 'Exact'})
-                book_matched.add(bi)
-                bank_matched.add(si)
-                break
+        key = (b_ref, b_amt)
+        if key in bank_lookup:
+            # Take first unmatched bank entry with this key
+            for si in bank_lookup[key]:
+                if si not in bank_matched:
+                    matched_pairs.append({'book_idx': bi, 'bank_idx': si, 'match_type': 'Exact'})
+                    book_matched.add(bi)
+                    bank_matched.add(si)
+                    break
 
-    # Pass 2: Same amount + date within ±DATE_PROXIMITY_DAYS
+    # Pass 2: Same amount + date within +/-DATE_PROXIMITY_DAYS
+    # Build lookup: amount -> list of bank indices (for unmatched only)
+    amount_lookup: dict[float, list[int]] = {}
+    for si in bank_df.index:
+        if si not in bank_matched:
+            amt = round(bank_df.at[si, '_amount'], 2)
+            if amt not in amount_lookup:
+                amount_lookup[amt] = []
+            amount_lookup[amt].append(si)
+
     for bi in book_df.index:
         if bi in book_matched:
             continue
         b_amt = round(book_df.at[bi, '_amount'], 2)
         b_date = book_df.at[bi, 'Date']
-        for si in bank_df.index:
+
+        if b_amt not in amount_lookup:
+            continue
+
+        for si in amount_lookup[b_amt]:
             if si in bank_matched:
                 continue
-            s_amt = round(bank_df.at[si, '_amount'], 2)
             s_date = bank_df.at[si, 'Date']
-            if b_amt == s_amt:
-                try:
-                    days_diff = abs((b_date - s_date).days)
-                except Exception:
-                    days_diff = 9999
-                if days_diff <= DATE_PROXIMITY_DAYS:
-                    matched_pairs.append({'book_idx': bi, 'bank_idx': si, 'match_type': 'Probable'})
-                    book_matched.add(bi)
-                    bank_matched.add(si)
-                    break
+
+            # Calculate date difference with proper error handling
+            days_diff = _date_difference_days(b_date, s_date)
+            if days_diff is not None and days_diff <= DATE_PROXIMITY_DAYS:
+                matched_pairs.append({'book_idx': bi, 'bank_idx': si, 'match_type': 'Probable'})
+                book_matched.add(bi)
+                bank_matched.add(si)
+                break
 
     book_only = book_df[~book_df.index.isin(book_matched)].copy()
     bank_only = bank_df[~bank_df.index.isin(bank_matched)].copy()
@@ -224,7 +260,17 @@ def match_transactions(book_df, bank_df):
     return matched_pairs, book_only, bank_only
 
 
-def classify_book_only(book_only_df):
+def _date_difference_days(date1, date2) -> Optional[int]:
+    """Calculate absolute difference in days between two dates. Returns None if invalid."""
+    if pd.isna(date1) or pd.isna(date2):
+        return None
+    try:
+        return abs((pd.Timestamp(date1) - pd.Timestamp(date2)).days)
+    except Exception:
+        return None
+
+
+def classify_book_only(book_only_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Classify unmatched book items.
     Book Debit (_amount > 0) = Deposit in Transit (receipt recorded but not yet on bank statement).
@@ -235,7 +281,7 @@ def classify_book_only(book_only_df):
     return deposits_in_transit, outstanding_cheques
 
 
-def classify_bank_only(bank_only_df):
+def classify_bank_only(bank_only_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Classify unmatched bank items.
     Bank Credit (_amount > 0) = credit not in book (interest, direct credits).
@@ -250,11 +296,11 @@ def classify_bank_only(bank_only_df):
 # 3. ADJUSTING ENTRIES
 # ─────────────────────────────────────────────────────────────────────────────
 
-def categorize_bank_item(description, amount):
+def categorize_bank_item(description: str, amount: float) -> dict:
     """
     Suggest a journal entry for a bank-only item.
-    amount > 0 = bank credit (money in) → Dr 1020 / Cr ???
-    amount < 0 = bank debit  (money out) → Dr ??? / Cr 1020
+    amount > 0 = bank credit (money in) -> Dr Cash at Bank / Cr ???
+    amount < 0 = bank debit  (money out) -> Dr ??? / Cr Cash at Bank
 
     Returns dict: category, dr_account, cr_account, dr_code, cr_code
     """
@@ -312,7 +358,11 @@ def categorize_bank_item(description, amount):
                     'dr_amount': abs_amt, 'cr_amount': abs_amt}
 
 
-def build_adjusting_entries(bank_credits, bank_debits, period_end):
+def build_adjusting_entries(
+    bank_credits: pd.DataFrame,
+    bank_debits: pd.DataFrame,
+    period_end: str
+) -> list[dict]:
     """Build list of required adjusting journal entries from bank-only items."""
     entries = []
     for _, row in bank_credits.iterrows():
@@ -334,9 +384,14 @@ def build_adjusting_entries(bank_credits, bank_debits, period_end):
 # 4. RECONCILIATION MATH
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_reconciliation(book_closing, bank_closing,
-                         deposits_in_transit, outstanding_cheques,
-                         bank_credits, bank_debits):
+def build_reconciliation(
+    book_closing: float,
+    bank_closing: float,
+    deposits_in_transit: pd.DataFrame,
+    outstanding_cheques: pd.DataFrame,
+    bank_credits: pd.DataFrame,
+    bank_debits: pd.DataFrame
+) -> dict:
     """
     Calculate adjusted balances and reconciliation status.
 
@@ -384,7 +439,7 @@ def build_reconciliation(book_closing, bank_closing,
 # 5. EXCEL OUTPUT
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _fmt_date(val):
+def _fmt_date(val) -> str:
     """Format a date value as YYYY-MM-DD string."""
     if pd.isna(val) or val is None:
         return ''
@@ -394,17 +449,26 @@ def _fmt_date(val):
         return str(val)
 
 
-def _fmt_num(val):
-    """Return numeric value or None for blanks."""
-    if val is None or (isinstance(val, float) and np.isnan(val)):
+def _fmt_num(val) -> Optional[float]:
+    """Return numeric value or None for blanks/NaN."""
+    if val is None or pd.isna(val):
         return None
     return float(val)
 
 
-def write_dashboard(wb, recon, matched_count, period_start, period_end,
-                    deposits_in_transit, outstanding_cheques,
-                    bank_credits, bank_debits, exceptions):
-    ws = add_sheet(wb, 'Dashboard', tab_color='00B050')
+def write_dashboard(
+    wb,
+    recon: dict,
+    matched_count: int,
+    period_start: str,
+    period_end: str,
+    deposits_in_transit: pd.DataFrame,
+    outstanding_cheques: pd.DataFrame,
+    bank_credits: pd.DataFrame,
+    bank_debits: pd.DataFrame,
+    exceptions: list
+):
+    ws = add_sheet(wb, 'Dashboard', tab_color=TAB_GREEN)
     period_str = f"{period_start}  to  {period_end}"
     row = write_title(ws, 'Bank Reconciliation — Dashboard',
                       'Shwe Mandalay Cafe', period_str)
@@ -470,14 +534,20 @@ def write_dashboard(wb, recon, matched_count, period_start, period_end,
     freeze_panes(ws, row=2, col=1)
 
 
-def write_reconciliation_statement(wb, recon, deposits_in_transit,
-                                   outstanding_cheques, bank_credits, bank_debits,
-                                   period_end):
-    ws = add_sheet(wb, 'Reconciliation', tab_color='4472C4')
+def write_reconciliation_statement(
+    wb,
+    recon: dict,
+    deposits_in_transit: pd.DataFrame,
+    outstanding_cheques: pd.DataFrame,
+    bank_credits: pd.DataFrame,
+    bank_debits: pd.DataFrame,
+    period_end: str
+):
+    ws = add_sheet(wb, 'Reconciliation', tab_color=TAB_BLUE)
     row = write_title(ws, 'Bank Reconciliation Statement',
                       'Shwe Mandalay Cafe', f'As at {period_end}')
 
-    def section(label, r):
+    def section(label: str, r: int) -> int:
         ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
         c = ws.cell(row=r, column=1, value=label)
         c.font = Font(bold=True, size=11, name='Arial', color='1F4E79')
@@ -485,8 +555,7 @@ def write_reconciliation_statement(wb, recon, deposits_in_transit,
         c.border = THIN_BORDER
         return r + 1
 
-    def item(label, amt, r, indent=False, total=False, double=False):
-        from openpyxl.styles import Border, Side
+    def item(label: str, amt, r: int, indent: bool = False, total: bool = False, double: bool = False) -> int:
         label_cell = ws.cell(row=r, column=1 if not indent else 2, value=label)
         label_cell.font = TOTAL_FONT if total else NORMAL_FONT
         label_cell.border = THIN_BORDER
@@ -498,7 +567,6 @@ def write_reconciliation_statement(wb, recon, deposits_in_transit,
         amount_cell.alignment = Alignment(horizontal='right')
         if total:
             amount_cell.font = TOTAL_FONT
-            from openpyxl.styles import Border, Side
             if double:
                 amount_cell.border = Border(bottom=Side(style='double'))
                 label_cell.border = Border(bottom=Side(style='double'))
@@ -596,8 +664,13 @@ def write_reconciliation_statement(wb, recon, deposits_in_transit,
     freeze_panes(ws, row=2, col=1)
 
 
-def write_matched_items(wb, matched_pairs, book_df, bank_df):
-    ws = add_sheet(wb, 'Matched Items', tab_color='4472C4')
+def write_matched_items(
+    wb,
+    matched_pairs: list[dict],
+    book_df: pd.DataFrame,
+    bank_df: pd.DataFrame
+):
+    ws = add_sheet(wb, 'Matched Items', tab_color=TAB_BLUE)
     row = write_title(ws, 'Matched Transactions',
                       'Transactions successfully matched between cash book and bank statement')
     headers = ['Match Type', 'Book Date', 'Book Reference', 'Book Description',
@@ -627,8 +700,8 @@ def write_matched_items(wb, matched_pairs, book_df, bank_df):
     freeze_panes(ws)
 
 
-def write_outstanding_cheques(wb, outstanding_cheques):
-    ws = add_sheet(wb, 'Outstanding Cheques', tab_color='4472C4')
+def write_outstanding_cheques(wb, outstanding_cheques: pd.DataFrame):
+    ws = add_sheet(wb, 'Outstanding Cheques', tab_color=TAB_BLUE)
     row = write_title(ws, 'Outstanding Cheques',
                       'Payments in cash book not yet cleared by bank')
     headers = ['Date', 'Reference', 'Description', 'Amount']
@@ -649,8 +722,8 @@ def write_outstanding_cheques(wb, outstanding_cheques):
     freeze_panes(ws)
 
 
-def write_deposits_in_transit(wb, deposits_in_transit):
-    ws = add_sheet(wb, 'Deposits in Transit', tab_color='4472C4')
+def write_deposits_in_transit(wb, deposits_in_transit: pd.DataFrame):
+    ws = add_sheet(wb, 'Deposits in Transit', tab_color=TAB_BLUE)
     row = write_title(ws, 'Deposits in Transit',
                       'Receipts in cash book not yet credited by bank')
     headers = ['Date', 'Reference', 'Description', 'Amount']
@@ -671,8 +744,8 @@ def write_deposits_in_transit(wb, deposits_in_transit):
     freeze_panes(ws)
 
 
-def write_bank_only_items(wb, bank_credits, bank_debits):
-    ws = add_sheet(wb, 'Bank-Only Items', tab_color='70AD47')
+def write_bank_only_items(wb, bank_credits: pd.DataFrame, bank_debits: pd.DataFrame):
+    ws = add_sheet(wb, 'Bank-Only Items', tab_color=TAB_ORANGE)
     row = write_title(ws, 'Bank-Only Items',
                       'Items on bank statement not found in cash book — require adjusting entries')
     headers = ['Date', 'Reference', 'Description', 'Type', 'Amount', 'Action Required']
@@ -702,8 +775,8 @@ def write_bank_only_items(wb, bank_credits, bank_debits):
     freeze_panes(ws)
 
 
-def write_adjusting_entries(wb, adjusting_entries):
-    ws = add_sheet(wb, 'Adjusting Entries', tab_color='4472C4')
+def write_adjusting_entries(wb, adjusting_entries: list[dict]):
+    ws = add_sheet(wb, 'Adjusting Entries', tab_color=TAB_BLUE)
     row = write_title(ws, 'Required Adjusting Entries',
                       'Journal entries to bring cash book in line with bank statement',
                       'Post these entries in Module 4 (Journal Adjustments)')
@@ -738,8 +811,8 @@ def write_adjusting_entries(wb, adjusting_entries):
     freeze_panes(ws)
 
 
-def write_exceptions_sheet(wb, exceptions):
-    ws = add_sheet(wb, 'Exceptions', tab_color='FF0000')
+def write_exceptions_sheet(wb, exceptions: list):
+    ws = add_sheet(wb, 'Exceptions', tab_color=TAB_RED)
     row = write_title(ws, 'Exceptions', 'Issues requiring investigation')
     headers = ['#', 'Exception / Warning']
     row = write_header_row(ws, headers, row)
