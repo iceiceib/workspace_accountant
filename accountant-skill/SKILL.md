@@ -1,5 +1,5 @@
 ---
-name: accountant
+name: accountant-skill
 description: "Full-cycle accounting skill for SME businesses using .xlsx files. Use this skill whenever the user asks to: summarize journals or books of prime entry, post to or summarize ledgers, reconcile bank accounts, create adjusting journal entries, generate trial balances (unadjusted/adjusted/post-closing), or produce financial statements (Income Statement, Balance Sheet, Cash Flow). Also trigger when the user mentions accounting cycle, closing entries, depreciation schedules, AR/AP aging, or any bookkeeping task involving .xlsx data. This skill works exclusively with .xlsx Excel files — no Google Sheets."
 ---
 
